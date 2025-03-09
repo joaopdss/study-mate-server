@@ -7,6 +7,9 @@ from app.services.search_service import search_exam_info
 from app.services.llm_service import generate_study_plan
 from app.utils.ai_prompt_builder import build_study_plan_prompt
 from app.utils.pdf_processor import process_exam_materials
+import json
+import uuid
+from datetime import datetime
 
 study_plan_bp = Blueprint('study_plan', __name__)
 
@@ -72,42 +75,85 @@ def generate_plan():
         # Call LLM to generate study plan
         study_plan_data = generate_study_plan(system_prompt, user_prompt)
 
-        print(f"Study plan data: /n/n{study_plan_data}")
+        print(f"Study plan data: \n\n{study_plan_data}")
         
-        # if not study_plan_data:
-        #     return jsonify({"error": "Failed to generate study plan"}), 500
+        if not study_plan_data:
+            return jsonify({"error": "Failed to generate study plan"}), 500
         
-        # # Insert study plan into Supabase
-        # plan_insert_result = supabase.table('s').insert({
-        #     "exam_id": exam_id,
-        #     "plan_text": study_plan_data.get('overview', '')
-        # }).execute()
+        print("Converting plan to JSON")
+        # Ensure study_plan_data is a dictionary (parse JSON if it's a string)
+        if isinstance(study_plan_data, str):
+            try:
+                print("Parsing study_plan_data from JSON string")
+                study_plan_data = json.loads(study_plan_data)
+            except json.JSONDecodeError as e:
+                print(f"JSON parsing error: {str(e)}")
+                return jsonify({"error": f"Invalid study plan data format: {str(e)}"}), 500
         
-        # if not plan_insert_result.data:
-        #     return jsonify({"error": "Failed to save study plan"}), 500
+        print("Inserting study plan into Supabase")
+        # Generate a new UUID for the study plan
+        study_plan_id = str(uuid.uuid4())
         
-        # study_plan_id = plan_insert_result.data[0]['id']
+        # Current timestamp for created_at
+        current_timestamp = datetime.utcnow().isoformat()
         
-        # # Insert study plan days
-        # for day in study_plan_data.get('days', []):
-        #     supabase.table('StudyPlanDays').insert({
-        #         "study_plan_id": study_plan_id,
-        #         "day_number": day.get('day_number', 0),
-        #         "planned_topics": day.get('planned_topics', []),
-        #         "resources": day.get('resources', []),
-        #         "estimated_hours": day.get('estimated_hours', 0),
-        #         "completed": False
-        #     }).execute()
-        
-        # # Return the study plan with its days
-        # return jsonify({
-        #     "id": study_plan_id,
-        #     "exam_id": exam_id,
-        #     "overview": study_plan_data.get('overview', ''),
-        #     "days": study_plan_data.get('days', [])
-        # }), 201
-        
+        try:
+            print(f"Inserting study plan into Supabase with ID: {study_plan_id}")
+            insert_data = {
+                "id": study_plan_id,
+                "exam_id": exam_id,
+                "plan_text": json.dumps(study_plan_data),  # Store the entire JSON as text
+                "overview": study_plan_data.get('overview', ''),
+                "created_at": current_timestamp
+            }
+            print(f"Insert data: {insert_data}")
+            plan_insert_result = supabase.table('study_plans').insert({
+                "id": study_plan_id,
+                "exam_id": exam_id,
+                "plan_text": json.dumps(study_plan_data),  # Store the entire JSON as text
+                "overview": study_plan_data.get('overview', ''),
+                "created_at": current_timestamp
+            }).execute()
+            
+            print(f"Plan insert result: {plan_insert_result}")
+            
+            if not plan_insert_result.data:
+                print("No data returned from study_plan insert")
+                return jsonify({"error": "Failed to save study plan"}), 500
+                
+            # Insert study plan days
+            print(f"Inserting study plan days into Supabase for plan: {study_plan_id}")
+            for day in study_plan_data.get('day_topics', []):
+                day_id = str(uuid.uuid4())
+                day_insert_result = supabase.table('study_plan_days').insert({
+                    "id": day_id,
+                    "study_plan_id": study_plan_id,
+                    "day_number": day.get('day_num', 0),
+                    "planned_topics": day.get('topics_for_the_day', ''),
+                    "subtopics": day.get('subtopics', ''),
+                    "resources": day.get('resources', ''),
+                    "estimated_hours": day.get('estimated_hours_needed', 0),
+                    "completed": False,
+                    "description": day.get('description', ''),  # Empty description for now
+                    "created_at": current_timestamp
+                }).execute()
+                print(f"Inserted day {day.get('day_num', 0)} with ID: {day_id}")
+                
+            # Return the study plan with its days
+            print(f"Successfully created study plan: {study_plan_id}")
+            return jsonify({
+                "id": study_plan_id,
+                "exam_id": exam_id,
+                "overview": study_plan_data.get('overview', ''),
+                "days": study_plan_data.get('day_topics', [])
+            }), 201
+                
+        except Exception as e:
+            print(f"Supabase error: {str(e)}")
+            return jsonify({"error": str(e)}), 500
+    
     except Exception as e:
+        print(f"General error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @study_plan_bp.route('/plan/<exam_id>', methods=['GET'])

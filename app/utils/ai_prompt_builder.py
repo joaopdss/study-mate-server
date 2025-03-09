@@ -47,7 +47,11 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
 
     1. Parse the user's input based on the required structure.
     2. Output the result strictly in JSON format (no additional text before or after the JSON).
-
+    3. For each "description" field in the output:
+        - Provide at least four (4) paragraphs of explanatory text.
+        - Make it as detailed and in-depth as possible, as if writing a condensed textbook section or academic mini-lesson.
+        - Include real-world examples, conceptual explanations, and clarifications in a didactic style.
+        - Avoid simply listing tasks or instructions; focus on teaching and elucidating concepts.
     ---
 
     Simple Example
@@ -81,6 +85,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     - Day number
     - Topics for the day
     - Specific subtopics
+    - Description (an extensive, multi-paragraph, didactic text)
     - Resource recommendations (books, online courses, practice problems)
     - Estimated hours needed
 
@@ -97,6 +102,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
         "day_num": 1,
         "topics_for_the_day": "<list or description of topics>",
         "subtopics": "<details on subtopics>",
+        "description": "<at least four paragraphs of deeply explanatory text—like a mini-textbook chapter>",
         "resources": "<recommended resources>",
         "estimated_hours_needed": "<number or range of hours>"
         },
@@ -104,16 +110,46 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
         "day_num": 2,
         "topics_for_the_day": "...",
         "subtopics": "...",
+        "description": "...",
         "resources": "...",
-        "estimated_hours_needed": "..."
+        "estimated_hours_needed": "...",
         }
         // Repeat for as many days as needed
     ]
     }
 
+    
+    ### Example JSON Output (Illustrative)
+
+    Below is an **illustrative example** to show the level of detail we expect in the `"description"` field. **Do not** include any extra text outside of the JSON in your final answer.
+    
+    {
+        "overview": "This plan will guide you through key aspects of reading comprehension step by step, ensuring a deep understanding of passage structures, question types, and strategies for effective reading in an exam context.",
+        "day_topics": [
+            {
+            "day_num": 1,
+            "topics_for_the_day": "Reading Comprehension Basics",
+            "subtopics": "Identifying passage structures, Main ideas, Basic question types (Factual Information, Vocabulary)",
+            "description": "Reading comprehension relies on understanding how authors structure their arguments and present information. At its simplest level, each passage has a main idea—a core concept that the writer wants to convey. These key ideas often appear at the beginning or end of a paragraph, but they can also be woven subtly throughout the text. By paying attention to transitional phrases such as 'in contrast,' 'moreover,' or 'for example,' you can follow the logical flow of the argument from one point to the next.\n\nWhen analyzing paragraph structures, it helps to see each paragraph as a building block. The first paragraph might introduce the overall topic, while subsequent paragraphs provide evidence, examples, or counterarguments. For instance, if you’re reading an article about the environmental impact of deforestation, the second paragraph might focus on the economic reasons behind logging, and the third might explore the ecological consequences. Understanding this structure makes it easier to piece together the author's main argument and critique its strengths or weaknesses.\n\nAnother fundamental aspect of reading comprehension is vocabulary in context. Instead of treating unfamiliar words in isolation, examine how they function in the sentence or paragraph around them. Authors often give hints about a word’s meaning by rephrasing an idea or by providing examples that clarify how a concept works. For example, if you encounter the term 'photosynthesis' and the paragraph also references the way plants convert sunlight into chemical energy, you can deduce the term’s meaning even if you’ve never seen it before.\n\nEqually important is recognizing your own background knowledge. If you’ve read widely on environmental topics, you might already be familiar with certain key terms or debates. Leveraging this prior understanding allows you to make more nuanced connections between ideas. The ultimate goal of Day 1 is to ground you in the basics: identifying main ideas, discerning paragraph organization, and decoding unfamiliar vocabulary without losing the flow of the passage.",
+            "resources": "The Official Guide to the TOEFL Test, Reading practice websites",
+            "estimated_hours_needed": 2
+            },
+            {
+            "day_num": 2,
+            "topics_for_the_day": "Refining Inference Skills",
+            "subtopics": "Logical conclusions, Author’s assumptions, Evaluating evidence",
+            "description": "Once you've mastered the fundamentals of mapping out main ideas and following logical structures, the next step is to develop stronger inferential and analytical skills. Inference involves reading between the lines, connecting details that may not be explicitly stated but are implied by the overall context. For instance, if an author consistently highlights negative aspects of deforestation while downplaying any economic benefits, you can infer that the writer likely has an environmental advocacy perspective.\n\nEvaluating author bias is closely tied to these inferential skills. Writers often frame their arguments using particular word choices or examples that reflect their subjective viewpoints. Phrases like 'it is undeniable' or 'obviously' can be markers of bias, since they assume no room exists for contrary opinions. By noting such language, you develop a critical lens, allowing you to weigh the legitimacy of the evidence presented. If a piece on deforestation overlooks the concerns of local communities who rely on logging, you might question whether the author is providing a fully balanced view.\n\nAnother layer of advanced reading involves understanding rhetorical strategies—techniques writers use to persuade or inform their audience. An author may use anecdotal evidence to create an emotional appeal, or they might reference authoritative sources to establish credibility (an appeal to ethos). Spotting these strategies will sharpen your ability to judge the passage’s persuasiveness and logic. For example, if a text about environmental policy cites a study from an internationally respected scientific journal, it likely bolsters the article’s credibility, whereas reliance on unverified data can diminish its overall impact.\n\nUltimately, inferential and analytical reading forms the bridge between basic comprehension and critical thinking. By delving deeper into implied meanings, identifying bias, and recognizing rhetorical devices, you gain a more holistic understanding of the text. This skill set is invaluable not only for standardized exams but also for navigating the vast array of articles, reports, and essays encountered in academic and professional life.",
+            "resources": "Practice passages from official test-prep materials, Academic reading journals",
+            "estimated_hours_needed": 2    
+            }
+        ]
+    }
+
     Important:
-    - Do not include any additional text, explanations, or markdown formatting outside of the JSON.
-    - The final answer should be valid JSON only."""
+
+    - Produce only the JSON in the final answer—no explanations, markdown, or additional text before/after it.
+    - Each "description" must be long-form and explanatory, with at least four paragraphs or more.
+    """
 
     
     user_prompt = f"""Create a daily study plan for {exam.title} in {exam.country}.
@@ -131,8 +167,10 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     - Day number
     - Topics for the day
     - Specific subtopics
+    - Description (an extensive text that **explains** the day’s topic in a didactic, educational way, as if it were a short textbook or mini-lesson. It should focus on clarifying concepts, providing background, giving examples, and offering insights. **Avoid** listing tasks or instructions to do.)
     - Resource recommendations (books, online courses, practice problems)
     - Estimated hours needed"""
+    
     
 
     if materials_content:
