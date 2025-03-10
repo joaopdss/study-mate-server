@@ -8,10 +8,10 @@ from typing import Dict, Any, Optional, List, Union
 from openai import OpenAI
 
 # Load API key from environment variables
-DEEPSEEK_API_KEY = os.getenv('DEEPSEEK_API_KEY')
-DEEPSEEK_API_URL = "https://api.deepseek.com"
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+OPENAI_API_URL = "https://api.openai.com/v1"
 
-def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, model: str = "deepseek-reasoner") -> Optional[str]:
+def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, model: str = "o3-mini") -> Optional[str]:
     """
     Makes a call to the OpenAI API.
     
@@ -24,7 +24,7 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, mod
         str: The model's response or None if the call failed
     """
     try:
-        client = OpenAI(api_key=DEEPSEEK_API_KEY, base_url=DEEPSEEK_API_URL)
+        client = OpenAI(api_key=OPENAI_API_KEY)
         
         response = client.chat.completions.create(
             model=model,
@@ -32,7 +32,7 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, mod
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=temperature
+            reasoning_effort="low"
         )
         
         return response.choices[0].message.content  
@@ -163,7 +163,7 @@ def extract_day_number(day_title: str) -> int:
     except:
         return 0
 
-def generate_quiz(prompt: str) -> Optional[List[Dict[str, Any]]]:
+def generate_quiz(system_prompt: str, prompt: str) -> Optional[List[Dict[str, Any]]]:
     """
     Generates a quiz using the LLM and parses the response.
     
@@ -173,44 +173,10 @@ def generate_quiz(prompt: str) -> Optional[List[Dict[str, Any]]]:
     Returns:
         list: List of question objects or None if generation failed
     """
-    response = call_llm(prompt)
-    if not response:
-        return None
+    response = call_llm(system_prompt, prompt)
     
-    try:
-        # Try to extract JSON from the response
-        # The response might contain markdown or text wrapping the JSON
-        import re
-        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', response)
-        
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            # If no code block, try to find array brackets
-            json_match = re.search(r'\[\s*\{[\s\S]*\}\s*\]', response)
-            if json_match:
-                json_str = json_match.group(0)
-            else:
-                # As a fallback, assume the entire response is JSON
-                json_str = response
-        
-        questions = json.loads(json_str)
-        
-        # Validate the structure of each question
-        validated_questions = []
-        for q in questions:
-            if isinstance(q, dict) and all(key in q for key in ['question_text', 'options', 'correct_answer']):
-                validated_questions.append(q)
-        
-        return validated_questions
+    return response
     
-    except Exception as e:
-        print(f"Error parsing quiz: {str(e)}")
-        try:
-            # Fallback: Try to parse the quiz in a more forgiving way
-            return parse_quiz_text(response)
-        except:
-            return None
 
 def parse_quiz_text(text: str) -> List[Dict[str, Any]]:
     """

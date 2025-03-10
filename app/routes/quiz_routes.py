@@ -71,10 +71,10 @@ def generate_quiz_endpoint():
             "topics_of_the_day": topics_of_the_day
         }
         
-        prompt = build_quiz_prompt(quiz_request, exam, search_results, materials_content)
+        system_prompt, prompt = build_quiz_prompt(quiz_request, exam, search_results, materials_content)
         
         # Call LLM to generate quiz
-        questions = generate_quiz(prompt)
+        questions = generate_quiz(system_prompt, prompt)
         
         if not questions:
             return jsonify({"error": "Failed to generate quiz"}), 500

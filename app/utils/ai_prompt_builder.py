@@ -43,15 +43,74 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
         str: A formatted prompt for the LLM to generate a study plan
     """
 
-    system_prompt = """You are a helpful assistant. The user will provide a text prompt. Follow these instructions:
+    system_prompt = """You are a scholarly assistant designed to create in-depth educational content. The user will request a study plan. Follow these steps:
 
-    1. Parse the user's input based on the required structure.
-    2. Output the result strictly in JSON format (no additional text before or after the JSON).
-    3. For each "description" field in the output:
-        - Provide at least four (4) paragraphs of explanatory text.
-        - Make it as detailed and in-depth as possible, as if writing a condensed textbook section or academic mini-lesson.
-        - Include real-world examples, conceptual explanations, and clarifications in a didactic style.
-        - Avoid simply listing tasks or instructions; focus on teaching and elucidating concepts.
+    1. **Content Focus**: For each day's "description" field:
+        - Write 12-16 paragraphs of dense, textbook-style explanations.
+        - Focus on *teaching concepts*, not prescribing study actions.
+        - Avoid all mentions of practice strategies, time management tips, or study instructions.
+        - Provide foundational theory, historical context, conceptual frameworks, and real-world examples.
+        - Use illustrative analogies, case studies, and academic references.
+    
+    Example of **Prohibited Content**:
+        ❌ "Allocate 18 minutes per passage during practice."
+        ❌ "Complete three practice essays this week."
+        ❌ "Review errors to identify patterns."
+    
+    Example of **Required Content**:
+        ✅ "The main idea of a passage often derives from the author's thesis statement, typically found in the introductory paragraph. For instance, in a 2021 study on climate communication, researchers identified that 78% of scientific papers place their core argument within the first two sentences. This positioning allows readers to immediately grasp the text's purpose before encountering supporting evidence like statistical trends or ethnographic observations..."
+    
+    2. **Structural Requirements**:
+    - Separate paragraphs with `\\n\\n`.
+    - Escape quotes with `\"`.
+    - Use full sentences; avoid bullet points even in prose.
+
+    3. **Sample Paragraph Structure**:
+    "Quantum mechanics operates on the principle of superposition, where particles exist in multiple states simultaneously until measured. Schrödinger's famous 1935 thought experiment with the cat illustrates this: a hypothetical cat in a sealed box is both alive and dead until observed. This paradox underscores the Copenhagen interpretation's assertion that observation collapses wave functions. Contemporary applications, like quantum computing, leverage superposition to process information exponentially faster than classical bits..."    
+
+    5. Ensure your final output is **valid JSON**:
+        - Escape any double quotes inside strings using a backslash (e.g., \"some text\").
+        - Replace actual newlines in strings with \n so they do not break JSON structure.
+        - Do not include raw control characters (e.g., tabs, newlines, etc.) that are unescaped.
+        - Do not wrap the output in triple backticks or any other markdown formatting.
+        - Do not include trailing commas or any other invalid JSON elements.
+    
+    **INSTRUCTIONS FOR "DESCRIPTION" FIELD**
+
+    1. **Structure Requirements**:
+    - Start with a 1-2 sentence **plain-language definition** using everyday analogies:
+        *"Thesis = Main idea, like the headline of a news article. Paragraph organization = How ideas are ordered, like arranging furniture in a room."*  
+    - Then explain through **3 Layers**:
+        1. **Basic Concept**: "What is [topic]?" (Simple terms)
+        2. **How It Works**: "Why does this matter for [exam subject]?" (Subject-specific relevance)
+        3. **Exam Connection**: "How will this help you answer questions?" (General testing strategy)
+
+    2. **Example Framework**:
+    - For each subtopic, provide:
+        - **Real-World Scenario**: *"In a history exam passage about WWII, the thesis might be: 'Allied victory depended on three factors: industrial production, intelligence breakthroughs, and Soviet resilience.'"*  
+        - **Problem-Solution Pair**: *"If you're stuck identifying the thesis, look for sentences with numbers/listing words like 'key reasons' or 'primary causes'."*  
+        - **Cross-Subject Example**: *"In physics, a passage about thermodynamics might organize paragraphs as: (1) Laws of heat transfer, (2) Engine efficiency case study, (3) Climate change applications."*
+
+    3. **Flow & Accessibility Rules**:
+    - Use **guided transitions** between paragraphs:
+        - *"Now that we understand X, let's see how Y builds on it..."*  
+        - *"This connects to [previous concept] because..."*  
+    - **Banned Terms**: Avoid academic jargon without explanation (e.g., "lexical cohesion" → "words that link ideas").  
+    - **Proficiency Scaling**: If user's level is "beginner," explain concepts using grade 8-10 vocabulary; for "advanced," add discipline-specific nuances.
+
+    4. **Exam-Tailored Examples**:
+    - Dynamically adapt examples to the exam's subject using this template:  
+        *"In [subject] exams about [topic], you might encounter..."*  
+        - History: *"A passage analyzing the causes of the French Revolution with thesis in paragraph 2."*  
+        - Physics: *"A text explaining quantum theory through semiconductor case studies."*  
+        - Certifications: *"A nursing exam passage describing infection control protocols."*
+
+    5. **Paragraph Logic Checks**:
+    - Every paragraph must:  
+        a) Reference the previous concept  
+        b) Include a concrete example  
+        c) State its exam relevance  
+        *"Transition words (like 'however') signal contrasting ideas. In a chemistry passage, you might read: 'Reactant A increases yield. However, excess amounts cause side reactions.' This helps you anticipate compare/contrast questions."*
     ---
 
     Simple Example
@@ -85,7 +144,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     - Day number
     - Topics for the day
     - Specific subtopics
-    - Description (an extensive, multi-paragraph, didactic text)
+    - Description (12 to 16 paragraphs of deeply explanatory text with clear formatting for lists)
     - Resource recommendations (books, online courses, practice problems)
     - Estimated hours needed
 
@@ -102,7 +161,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
         "day_num": 1,
         "topics_for_the_day": "<list or description of topics>",
         "subtopics": "<details on subtopics>",
-        "description": "<at least four paragraphs of deeply explanatory text—like a mini-textbook chapter>",
+        "description": "<12 to 16 paragraphs of explanatory text. Use line breaks for clarity \\n\\n, especially when enumerating items, like 1), 2), 3), etc.",
         "resources": "<recommended resources>",
         "estimated_hours_needed": "<number or range of hours>"
         },
@@ -130,7 +189,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
             "day_num": 1,
             "topics_for_the_day": "Reading Comprehension Basics",
             "subtopics": "Identifying passage structures, Main ideas, Basic question types (Factual Information, Vocabulary)",
-            "description": "Reading comprehension relies on understanding how authors structure their arguments and present information. At its simplest level, each passage has a main idea—a core concept that the writer wants to convey. These key ideas often appear at the beginning or end of a paragraph, but they can also be woven subtly throughout the text. By paying attention to transitional phrases such as 'in contrast,' 'moreover,' or 'for example,' you can follow the logical flow of the argument from one point to the next.\n\nWhen analyzing paragraph structures, it helps to see each paragraph as a building block. The first paragraph might introduce the overall topic, while subsequent paragraphs provide evidence, examples, or counterarguments. For instance, if you’re reading an article about the environmental impact of deforestation, the second paragraph might focus on the economic reasons behind logging, and the third might explore the ecological consequences. Understanding this structure makes it easier to piece together the author's main argument and critique its strengths or weaknesses.\n\nAnother fundamental aspect of reading comprehension is vocabulary in context. Instead of treating unfamiliar words in isolation, examine how they function in the sentence or paragraph around them. Authors often give hints about a word’s meaning by rephrasing an idea or by providing examples that clarify how a concept works. For example, if you encounter the term 'photosynthesis' and the paragraph also references the way plants convert sunlight into chemical energy, you can deduce the term’s meaning even if you’ve never seen it before.\n\nEqually important is recognizing your own background knowledge. If you’ve read widely on environmental topics, you might already be familiar with certain key terms or debates. Leveraging this prior understanding allows you to make more nuanced connections between ideas. The ultimate goal of Day 1 is to ground you in the basics: identifying main ideas, discerning paragraph organization, and decoding unfamiliar vocabulary without losing the flow of the passage.",
+            "description": "Reading comprehension begins with understanding how texts are typically organized. Authors often introduce a main thesis in the first paragraph, then use subsequent paragraphs to expand or refine that thesis.\\n\\nFor instance, a passage examining the impact of social media on communication might open by briefly describing a historical perspective on human interaction. It would then contrast that with modern digital dynamics, showing how social media has shifted norms.\\n\\nRecognizing paragraph organization is crucial. Topic sentences often appear at the beginning or end of each paragraph, summarizing the key idea. By spotting these, you can quickly outline the passage's core arguments.\\n\\nTransitional phrases like \"moreover\" or \"in contrast\" help connect individual points, indicating whether a paragraph supports or contradicts the previous discussion. Understanding these connections enriches your ability to see the big picture.\\n\\nContextual reading is another foundational element. If an author repeatedly references a particular concept—like \"algorithmic filtering\"—you can infer that this concept holds substantial significance.\\n\\nIn standardized tests, passages often follow predictable structures. Some center on cause-and-effect, while others employ compare-and-contrast formats to highlight similarities or differences. By recognizing these organizational cues, you can anticipate the flow of information.\\n\\nBackground knowledge can also aid comprehension. If you're familiar with social science theories, you'll notice how the passage correlates with or diverges from established paradigms.\\n\\nYou might see references to seminal studies or prominent authors. Identifying these references helps anchor the passage in a broader academic context, indicating its reliability or perspective.\\n\\nAnother key to understanding structure is paying attention to examples or case studies. Authors often illustrate abstract points with anecdotes or real-world data, making complex ideas more accessible.\\n\\nWhen you encounter unfamiliar vocabulary, look for definitions or restatements within the same paragraph. This internal context can guide you without having to rely on external dictionaries.\\n\\nBy mastering these structural basics, you'll develop a foundation for deeper analysis. The path toward advanced reading comprehension starts with the simple act of pinpointing how each paragraph builds upon or diverges from the preceding one.\\n\\nOver time, you'll learn to map out entire passages mentally, noting the main thesis, supporting evidence, and potential counterarguments. This skill will serve as a bedrock for the more nuanced inferential and critical reading techniques covered in the coming days.",
             "resources": "The Official Guide to the TOEFL Test, Reading practice websites",
             "estimated_hours_needed": 2
             },
@@ -138,7 +197,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
             "day_num": 2,
             "topics_for_the_day": "Refining Inference Skills",
             "subtopics": "Logical conclusions, Author’s assumptions, Evaluating evidence",
-            "description": "Once you've mastered the fundamentals of mapping out main ideas and following logical structures, the next step is to develop stronger inferential and analytical skills. Inference involves reading between the lines, connecting details that may not be explicitly stated but are implied by the overall context. For instance, if an author consistently highlights negative aspects of deforestation while downplaying any economic benefits, you can infer that the writer likely has an environmental advocacy perspective.\n\nEvaluating author bias is closely tied to these inferential skills. Writers often frame their arguments using particular word choices or examples that reflect their subjective viewpoints. Phrases like 'it is undeniable' or 'obviously' can be markers of bias, since they assume no room exists for contrary opinions. By noting such language, you develop a critical lens, allowing you to weigh the legitimacy of the evidence presented. If a piece on deforestation overlooks the concerns of local communities who rely on logging, you might question whether the author is providing a fully balanced view.\n\nAnother layer of advanced reading involves understanding rhetorical strategies—techniques writers use to persuade or inform their audience. An author may use anecdotal evidence to create an emotional appeal, or they might reference authoritative sources to establish credibility (an appeal to ethos). Spotting these strategies will sharpen your ability to judge the passage’s persuasiveness and logic. For example, if a text about environmental policy cites a study from an internationally respected scientific journal, it likely bolsters the article’s credibility, whereas reliance on unverified data can diminish its overall impact.\n\nUltimately, inferential and analytical reading forms the bridge between basic comprehension and critical thinking. By delving deeper into implied meanings, identifying bias, and recognizing rhetorical devices, you gain a more holistic understanding of the text. This skill set is invaluable not only for standardized exams but also for navigating the vast array of articles, reports, and essays encountered in academic and professional life.",
+            "description": "Reading comprehension moves beyond surface-level understanding once you begin to recognize implied ideas. Inference, or \"reading between the lines,\" involves identifying connections that aren't explicitly stated but are suggested by the context.\\n\\nFor instance, if an author frequently cites research about the negative effects of processed foods without ever mentioning potential benefits, you might infer a particular bias or focus on the drawbacks.\\n\\nEvaluating an author's bias is central to deep analysis. Pay attention to words that indicate strong emotional undertones, such as \"unfortunately\" or \"unquestionably.\" These can signal a subjective stance.\\n\\nSome texts may use a balanced approach, carefully laying out both pros and cons of an issue. Others might adopt a more persuasive tone, guiding you toward a specific conclusion through selective presentation of facts.\\n\\nRhetorical devices like analogies or metaphors can reveal an author's perspective. A passage about climate change might compare rising temperatures to \"a ticking time bomb,\" emphasizing urgency and potential catastrophe.\\n\\nLook also for the presence of qualifiers—terms like \"likely,\" \"suggests,\" or \"possibly.\" Their usage can indicate that the writer is hedging claims, which might make the argument more nuanced and less absolute.\\n\\nWhen you come across data or statistics, consider their source and how they're integrated. Do they come from peer-reviewed journals, reputable organizations, or anecdotal accounts? This evaluation helps determine the argument's credibility.\\n\\nBe aware of how authors structure their reasoning. A cause-and-effect argument might detail a phenomenon's root causes before outlining its consequences, while a compare-and-contrast approach alternates between two subjects or viewpoints.\\n\\nIf a passage includes counterarguments, note whether they're given fair representation. A writer might introduce opposing views only to dismiss them quickly, revealing a potential bias or a selective approach.\\n\\nAdvanced rhetorical devices, such as parallelism or strategic repetition, also shape how a message is received. Repeated words or phrases can emphasize an idea or evoke an emotional response, thus guiding the reader's interpretation.\\n\\nBy honing your inferential and analytical skills, you'll be equipped not just to understand the central thesis but also to critique the logic and evidence behind it.\\n\\nUltimately, deeper reading comprehension allows you to engage with texts on a level that goes beyond memorizing facts. You'll learn to question assumptions, weigh arguments, and form your own reasoned conclusions.",
             "resources": "Practice passages from official test-prep materials, Academic reading journals",
             "estimated_hours_needed": 2    
             }
@@ -147,8 +206,11 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
 
     Important:
 
-    - Produce only the JSON in the final answer—no explanations, markdown, or additional text before/after it.
-    - Each "description" must be long-form and explanatory, with at least four paragraphs or more.
+    - Use \\n (double backslash + n) within your JSON strings to represent actual line breaks.
+    - Escape any double quotes inside strings (e.g., \"example\").
+    - Do not insert raw control characters, invalid punctuation, or markdown code fences.
+    - The final answer must be valid JSON, so it can be parsed by any standard JSON parser without error.
+    - Ensure the "description" includes 12 to 16 paragraphs, using line breaks for multi-line lists or numbered items.
     """
 
     
@@ -167,9 +229,12 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     - Day number
     - Topics for the day
     - Specific subtopics
-    - Description (an extensive text that **explains** the day’s topic in a didactic, educational way, as if it were a short textbook or mini-lesson. It should focus on clarifying concepts, providing background, giving examples, and offering insights. **Avoid** listing tasks or instructions to do.)
+    - Description (12 to 16 paragraphs of deeply explanatory text with clear formatting for lists)
     - Resource recommendations (books, online courses, practice problems)
-    - Estimated hours needed"""
+    - Estimated hours needed
+    
+    Make sure to follow the JSON structure and format for the output, with the correct keys and values, commas, etc.
+    """
     
     
 
@@ -178,7 +243,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     
     return system_prompt, user_prompt
 
-def build_quiz_prompt(quiz_request, exam, search_results=None, materials_content=None):
+def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content):
     """
     Builds a quiz generation prompt for the LLM.
     
@@ -191,34 +256,110 @@ def build_quiz_prompt(quiz_request, exam, search_results=None, materials_content
     Returns:
         str: A formatted prompt for the LLM to generate a quiz
     """
-    topics_str = ", ".join(quiz_request.get("topics_of_the_day", []))
+
+    system_prompt = """
+    You are a scholarly assistant tasked with generating 120 multiple choice questions for exam preparation. Follow these steps carefully:
+
+    1. **Question Distribution**:
+        - Generate exactly 120 total questions.
+        - Split them into three difficulty levels:
+            - 40 questions labeled as "easy"
+            - 40 questions labeled as "medium"
+            - 40 questions labeled as "hard"
+
+    2. **Content Requirements**:
+        - Questions should be based on:
+            - topic
+            - subtopics
+            - search_about_exam
+            - exam_materials
+
+        - Ensure each question is relevant to the specified topic and subtopics.
+        - Incorporate insights or references from the exam details (if provided in exam_materials or discovered via search_about_exam).
+
+    3. **Question Structure**:
+        - Each question must adhere to the following JSON format:
+
+        {{
+            "question_text": "string",
+            "options": [
+            {{ "option": "A", "text": "string" }},
+            {{ "option": "B", "text": "string" }},
+            {{ "option": "C", "text": "string" }},
+            {{ "option": "D", "text": "string" }}
+            ],
+            "correct_answer": "A" | "B" | "C" | "D",
+            "explanation": "string",
+            "difficulty": "easy" | "medium" | "hard"
+        }}
+ 
+        Make sure:
+            - **"question_text"** is clear and directly relates to the topic.
+            - **"options"** is an array with four objects, each containing:
+                - `"option"` (one of "A", "B", "C", "D")
+                - `"text"` (the text for the option)
+            - **"correct_answer"** is a single letter ("A", "B", "C", or "D").
+            - **"explanation"** briefly justifies why the chosen answer is correct (1–3 sentences).
+            - **"difficulty"** matches the category for that question: "easy", "medium", or "hard".
+
+    4. Make sure all JSON **keys**:
+    - Are enclosed in double quotes but have no leading or trailing spaces, e.g., "options".
+    - Do not include extra quotes or indentation within the key. For instance, do not produce "    \"options\"" or similar variants.
+    - Avoid any invalid punctuation, characters, or formatting that might break JSON parsing (like unescaped quotes, random backticks, or trailing commas).
+    - Ensure that the final JSON is well-formed and parseable by standard JSON libraries.
+
+    5. **Additional Instructions**:
+        - Avoid overly tricky or ambiguous wording.
+        - Use domain-appropriate language and concepts.
+        - Distribute question complexity consistently across easy, medium, and hard sets.
+        
+    ---
+
+    ### Example Input (for demonstration purposes)
+
+    Topic: topics
+    Subtopics: subtopics
+    Web information about the exam: search_results
+    Exam materials: materials_content
+
+    ### Example JSON Output (for demonstration purposes)
+
+    [{{"question_text": "Which of the following best describes the First Law of Thermodynamics?", "options": [ { "option": "A", "text": "It states that energy cannot be created or destroyed, only transformed." }, { "option": "B", "text": "It explains how entropy tends to increase in an isolated system." }, { "option": "C", "text": "It focuses on the concept of absolute zero temperature." }, { "option": "D", "text": "It describes how heat is transferred via conduction and radiation only." } ], "correct_answer": "A", "explanation": "The First Law is also known as the principle of conservation of energy. Energy remains constant in a closed system.", "difficulty": "easy" }}, { "question_text": "Entropy is best defined as:", "options": [ { "option": "A", "text": "A measure of the total heat within a system." }, { "option": "B", "text": "A statistical measure of the disorder or randomness in a system." }, { "option": "C", "text": "The rate of thermal energy flow." }, { "option": "D", "text": "The energy lost due to friction within a system." } ], "correct_answer": "B", "explanation": "Entropy is often considered a measure of molecular randomness. A higher entropy correlates with greater disorder.", "difficulty": "easy" }}, { "question_text": "An isothermal process in thermodynamics implies:", "options": [ { "option": "A", "text": "Constant internal energy throughout the process." }, { "option": "B", "text": "Constant temperature throughout the process." }, { "option": "C", "text": "No heat exchange with surroundings." }, { "option": "D", "text": "A drastic change in entropy of the system." } ], "correct_answer": "B", "explanation": "In an isothermal process, temperature remains the same; heat can flow in or out to maintain that temperature.", "difficulty": "medium" }} // ... up to a total of 120 questions, split into 40 easy, 40 medium, 40 hard ]
     
-    prompt = f"""
-    Generate {quiz_request.get("num_questions", 10)} multiple-choice questions at a {quiz_request.get("difficulty", "Medium")} 
-    difficulty level on the following topics: {topics_str}.
-    
-    The questions should be related to {exam.title} in {exam.country}. The user's proficiency level is {exam.proficiency}.
-    
-    Each question should include:
-    1. The question text
-    2. Four options (A, B, C, D)
-    3. The correct answer (indicated by the letter)
-    4. A brief explanation of why the answer is correct
-    5. The specific topic it belongs to
-    
-    Format the response as a JSON array of objects, where each object represents a question with the following properties:
-    - question_text: string
-    - options: array of strings (4 options)
-    - correct_answer: string (the letter of the correct answer)
-    - explanation: string
-    - topic: string
-    - difficulty: string
+    In the **real** output, you will provide **120** such objects, each following the structure above. Remember to distribute them as **40 easy, 40 medium, 40 hard**. 
+
+    **Important Notes**:
+        - Return only valid JSON—no additional commentary, markdown, or decorative characters.
+        - Each question object must contain the keys: `"question_text"`, `"options"`, `"correct_answer"`, `"explanation"`, and `"difficulty"`.
+        - The array must have exactly 120 objects.
     """
     
-    if search_results:
-        prompt += f"\n\nIncorporate information from these example questions or typical exam content:\n{search_results}"
+    prompt = f"""
+    Topic: {topics_for_the_day}
+    Subtopics: {subtopics}
+    Web information about the exam: {search_results}
+    Exam materials: {materials_content}
+
+    I need 120 multiple choice questions based on the above details, make sure to generate questions based on the topic and subtopics, using the information of web information and exam materials as a reference:
+    - 40 easy questions
+    - 40 medium questions
+    - 40 hard questions
+
+    Please provide each question in valid JSON with the following structure:
+        {{
+        "question_text": "string",
+        "options": [
+            {{ "option": "A", "text": "string" }},
+            {{ "option": "B", "text": "string" }},
+            {{ "option": "C", "text": "string" }},
+            {{ "option": "D", "text": "string" }}
+        ],
+        "correct_answer": "A" | "B" | "C" | "D",
+        "explanation": "string",
+        "difficulty": "easy" | "medium" | "hard"
+        }}
+
+    Return your answer as a JSON array of 120 objects, with no additional commentary or formatting.
+    """
     
-    if materials_content:
-        prompt += f"\n\nBase some questions on the following content from the user's study materials:\n{materials_content}"
-    
-    return prompt 
+    return system_prompt, prompt 

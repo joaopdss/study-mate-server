@@ -10,6 +10,8 @@ from app.utils.pdf_processor import process_exam_materials
 import json
 import uuid
 from datetime import datetime
+from app.utils.ai_prompt_builder import build_quiz_prompt
+from app.services.llm_service import generate_quiz
 
 study_plan_bp = Blueprint('study_plan', __name__)
 
@@ -139,6 +141,68 @@ def generate_plan():
                 }).execute()
                 print(f"Inserted day {day.get('day_num', 0)} with ID: {day_id}")
                 
+            # After successfully generating the study plan, generate quizzes
+            print("Study plan created successfully. Now generating quizzes...")
+            
+            # No need to import generate_quiz_endpoint, we're implementing it directly
+            # Create quizzes for each day of the study plan
+            for day in study_plan_data.get('day_topics', []):
+                # Create request data for the quiz generation
+                day_num = day.get('day_num', 0)
+                topics_for_the_day = [day.get('topics_for_the_day', '')]
+                subtopics = day.get('subtopics', '')
+                
+                print(f"Generating quiz for day {day_num} with topics: {topics_for_the_day}")
+                
+                try:                    
+                    # Build prompt for quiz generation
+                    system_prompt, prompt = build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content)
+                    
+                    # Generate quiz
+                    questions = generate_quiz(system_prompt, prompt)
+                    
+                    print(questions)
+                    # print(f"Questions generated: {len(questions) if isinstance(questions, list) else 'Error: Not a list'}")
+
+                    # Parse JSON if it's returned as a string
+                    # if isinstance(questions, str):
+                    #     try:
+                    questions = json.loads(questions)
+                        # except json.JSONDecodeError as e:
+                        #     print(f"Failed to parse questions JSON: {str(e)}")
+                        #     questions = []
+
+                    # Insert questions into database
+                    # if isinstance(questions, list):
+                    for question in questions:
+                        # Validate question format
+                        if isinstance(question, dict) and 'question_text' in question and 'options' in question:
+                            try:
+                                question_id = str(uuid.uuid4())
+                                
+                                # Insert the question into the database
+                                question_result = supabase.table('questions').insert({
+                                    "id": question_id,
+                                    "study_plan_days_id": day_id,  # Use the day_id we got when inserting the day
+                                    "question_text": question.get('question_text', ''),
+                                    "options": question.get('options', []),
+                                    "correct_answer": question.get('correct_answer', ''),
+                                    "explanation": question.get('explanation', ''),
+                                    "topic": day.get('topics_for_the_day', ''),  # Use the day's topic
+                                    "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
+                                }).execute()
+                                
+                                print(f"Inserted question: {question_id}")
+                            except Exception as q_e:
+                                print(f"Error inserting question: {str(q_e)}")
+                    # else:
+                    #     print("No questions to insert - questions data is not a list")
+                    
+                    print(f"Successfully generated questions for day {day_num}")
+                    
+                except Exception as quiz_e:
+                    print(f"Error generating quiz for day {day_num}: {str(quiz_e)}")
+            
             # Return the study plan with its days
             print(f"Successfully created study plan: {study_plan_id}")
             return jsonify({
