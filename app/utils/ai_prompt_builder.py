@@ -4,6 +4,30 @@ Utility module for building prompts for AI services (LLM, search).
 """
 from typing import List
 
+def build_prompt_to_validate_json(json_string: str):
+    """
+    Builds a prompt to validate a JSON string.
+    """
+
+    system_prompt = """
+    You are a JSON validator and formatter. Your task is to verify that the input is correctly formatted JSON. If it is valid, output ONLY the formatted JSON as a single-line (minified) string, with no additional commentary. If it is not valid, output ONLY an error message that describes the formatting issue.
+
+    Examples of bad formatting to look for include:
+    - Use of comments (e.g., `// this is a comment` or `/* comment */`), which are not allowed in standard JSON.
+    - Trailing commas after the last element in an object or array (e.g., `{"key": "value",}`).
+    - Unquoted keys (e.g., `{key: "value"}` instead of `{"key": "value"}`).
+    - Mismatched or missing brackets or braces (e.g., `{"key": "value"` or `["item1", "item2"]}`).
+    - Use of single quotes instead of double quotes for strings (e.g., `{'key': 'value'}`).
+    """
+
+    user_prompt = f"""
+    Please validate the following JSON and output ONLY the formatted, single-line (minified) JSON if it is valid. If it is not valid, output ONLY an error message describing the formatting issue.
+
+    {json_string}
+    """
+
+    return system_prompt, user_prompt
+
 def build_exam_search_prompt(exam_title: str, exam_country: str, topics: List[str], educational_level: str = "", materials_content: str = ""):
     """
     Builds a search prompt for the exam information.
@@ -231,7 +255,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     - Specific subtopics
     - Description (12 to 16 paragraphs of deeply explanatory text with clear formatting for lists)
     - Resource recommendations (books, online courses, practice problems)
-    - Estimated hours needed
+    - Estimated hours needed (return only a number, no other text)
     
     Make sure to follow the JSON structure and format for the output, with the correct keys and values, commas, etc.
     """
@@ -258,80 +282,58 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     """
 
     system_prompt = """
-    You are a scholarly assistant tasked with generating 120 multiple choice questions for exam preparation. Follow these steps carefully:
+    You are a scholarly assistant tasked with generating exactly 120 multiple choice questions for exam preparation. Please follow these steps:
 
-    1. **Question Distribution**:
-        - Generate exactly 120 total questions.
-        - Split them into three difficulty levels:
-            - 40 questions labeled as "easy"
-            - 40 questions labeled as "medium"
-            - 40 questions labeled as "hard"
+    1. **Quantity & Difficulty Distribution**:
+        - Total questions: 120
+        - 40 labeled "easy"
+        - 40 labeled "medium"
+        - 40 labeled "hard"
 
-    2. **Content Requirements**:
-        - Questions should be based on:
-            - topic
-            - subtopics
-            - search_about_exam
-            - exam_materials
+    2. **Content**:
+        - Base each question on: topic, subtopics, search_about_exam, and exam_materials.
+        - Ensure relevance to the specified topic/subtopics and any provided exam details.
 
-        - Ensure each question is relevant to the specified topic and subtopics.
-        - Incorporate insights or references from the exam details (if provided in exam_materials or discovered via search_about_exam).
-
-    3. **Question Structure**:
-        - Each question must adhere to the following JSON format:
-
-        {{
+    3. **Format (JSON)**:
+        - Return an array of 120 question objects in valid JSON (no extra text or commentary).
+        - Each object must have:
+            {
             "question_text": "string",
             "options": [
-            {{ "option": "A", "text": "string" }},
-            {{ "option": "B", "text": "string" }},
-            {{ "option": "C", "text": "string" }},
-            {{ "option": "D", "text": "string" }}
+                { "option": "A", "text": "string" },
+                { "option": "B", "text": "string" },
+                { "option": "C", "text": "string" },
+                { "option": "D", "text": "string" }
             ],
             "correct_answer": "A" | "B" | "C" | "D",
-            "explanation": "string",
+            "explanation": "1–3 sentences justifying the correct answer",
             "difficulty": "easy" | "medium" | "hard"
-        }}
- 
-        Make sure:
-            - **"question_text"** is clear and directly relates to the topic.
-            - **"options"** is an array with four objects, each containing:
-                - `"option"` (one of "A", "B", "C", "D")
-                - `"text"` (the text for the option)
-            - **"correct_answer"** is a single letter ("A", "B", "C", or "D").
-            - **"explanation"** briefly justifies why the chosen answer is correct (1–3 sentences).
-            - **"difficulty"** matches the category for that question: "easy", "medium", or "hard".
+            }
 
-    4. Make sure all JSON **keys**:
-    - Are enclosed in double quotes but have no leading or trailing spaces, e.g., "options".
-    - Do not include extra quotes or indentation within the key. For instance, do not produce "    \"options\"" or similar variants.
-    - Avoid any invalid punctuation, characters, or formatting that might break JSON parsing (like unescaped quotes, random backticks, or trailing commas).
-    - Ensure that the final JSON is well-formed and parseable by standard JSON libraries.
+    4. **JSON Validity**:
+        - All keys must be enclosed in quotes without extra spaces or quotes (e.g., "options", not "    \"options\"").
+        - Do not include any trailing commas, backticks, or markdown syntax.
+        - The final JSON must parse correctly with standard libraries.
 
-    5. **Additional Instructions**:
-        - Avoid overly tricky or ambiguous wording.
-        - Use domain-appropriate language and concepts.
-        - Distribute question complexity consistently across easy, medium, and hard sets.
-        
-    ---
+    5. **Final Output**:
+        - Provide an array of exactly 120 question objects.
+        - Distribute them as 40 easy, 40 medium, and 40 hard questions.
+        - Use clear, domain-appropriate language and keep each question concise yet aligned with the specified material.
 
-    ### Example Input (for demonstration purposes)
+    Example of a single question object:
 
-    Topic: topics
-    Subtopics: subtopics
-    Web information about the exam: search_results
-    Exam materials: materials_content
-
-    ### Example JSON Output (for demonstration purposes)
-
-    [{{"question_text": "Which of the following best describes the First Law of Thermodynamics?", "options": [ { "option": "A", "text": "It states that energy cannot be created or destroyed, only transformed." }, { "option": "B", "text": "It explains how entropy tends to increase in an isolated system." }, { "option": "C", "text": "It focuses on the concept of absolute zero temperature." }, { "option": "D", "text": "It describes how heat is transferred via conduction and radiation only." } ], "correct_answer": "A", "explanation": "The First Law is also known as the principle of conservation of energy. Energy remains constant in a closed system.", "difficulty": "easy" }}, { "question_text": "Entropy is best defined as:", "options": [ { "option": "A", "text": "A measure of the total heat within a system." }, { "option": "B", "text": "A statistical measure of the disorder or randomness in a system." }, { "option": "C", "text": "The rate of thermal energy flow." }, { "option": "D", "text": "The energy lost due to friction within a system." } ], "correct_answer": "B", "explanation": "Entropy is often considered a measure of molecular randomness. A higher entropy correlates with greater disorder.", "difficulty": "easy" }}, { "question_text": "An isothermal process in thermodynamics implies:", "options": [ { "option": "A", "text": "Constant internal energy throughout the process." }, { "option": "B", "text": "Constant temperature throughout the process." }, { "option": "C", "text": "No heat exchange with surroundings." }, { "option": "D", "text": "A drastic change in entropy of the system." } ], "correct_answer": "B", "explanation": "In an isothermal process, temperature remains the same; heat can flow in or out to maintain that temperature.", "difficulty": "medium" }} // ... up to a total of 120 questions, split into 40 easy, 40 medium, 40 hard ]
-    
-    In the **real** output, you will provide **120** such objects, each following the structure above. Remember to distribute them as **40 easy, 40 medium, 40 hard**. 
-
-    **Important Notes**:
-        - Return only valid JSON—no additional commentary, markdown, or decorative characters.
-        - Each question object must contain the keys: `"question_text"`, `"options"`, `"correct_answer"`, `"explanation"`, and `"difficulty"`.
-        - The array must have exactly 120 objects.
+        {
+        "question_text": "Which of the following best describes the First Law of Thermodynamics?",
+        "options": [
+            { "option": "A", "text": "Energy cannot be created or destroyed, only transformed." },
+            { "option": "B", "text": "It explains how entropy tends to increase in an isolated system." },
+            { "option": "C", "text": "It focuses on the concept of absolute zero temperature." },
+            { "option": "D", "text": "It deals with heat transfer via conduction and radiation." }
+        ],
+        "correct_answer": "A",
+        "explanation": "The First Law is also known as the principle of conservation of energy.",
+        "difficulty": "easy"
+        }
     """
     
     prompt = f"""

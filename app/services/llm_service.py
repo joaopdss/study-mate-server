@@ -24,6 +24,7 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, mod
         str: The model's response or None if the call failed
     """
     try:
+        print(f"Calling LLM with model: {model}")
         client = OpenAI(api_key=OPENAI_API_KEY)
         
         response = client.chat.completions.create(
@@ -35,6 +36,7 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, mod
             reasoning_effort="low"
         )
         
+        print(f"Response obtained")
         return response.choices[0].message.content  
 
     except Exception as e:

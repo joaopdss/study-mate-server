@@ -5,13 +5,14 @@ from flask import Blueprint, request, jsonify
 from app.models.db import get_supabase_client
 from app.services.search_service import search_exam_info
 from app.services.llm_service import generate_study_plan
-from app.utils.ai_prompt_builder import build_study_plan_prompt
+from app.utils.ai_prompt_builder import build_study_plan_prompt, build_prompt_to_validate_json
 from app.utils.pdf_processor import process_exam_materials
 import json
 import uuid
 from datetime import datetime
 from app.utils.ai_prompt_builder import build_quiz_prompt
 from app.services.llm_service import generate_quiz
+from app.services.llm_service import call_llm
 
 study_plan_bp = Blueprint('study_plan', __name__)
 
@@ -125,8 +126,10 @@ def generate_plan():
                 
             # Insert study plan days
             print(f"Inserting study plan days into Supabase for plan: {study_plan_id}")
+            day_ids_map = {}
             for day in study_plan_data.get('day_topics', []):
                 day_id = str(uuid.uuid4())
+                day_ids_map[day.get('day_num', 0)] = day_id
                 day_insert_result = supabase.table('study_plan_days').insert({
                     "id": day_id,
                     "study_plan_id": study_plan_id,
@@ -166,35 +169,38 @@ def generate_plan():
 
                     # Parse JSON if it's returned as a string
                     # if isinstance(questions, str):
-                    #     try:
-                    questions = json.loads(questions)
-                        # except json.JSONDecodeError as e:
-                        #     print(f"Failed to parse questions JSON: {str(e)}")
-                        #     questions = []
+                    try:
+                        questions = json.loads(questions)
+                    except json.JSONDecodeError as e:
+                        print(f"Failed to parse questions JSON: {str(e)}")
+                        print(f"Trying to fix JSON")
+                        system_prompt_json, user_prompt_json = build_prompt_to_validate_json(questions)
+                        
+                        questions = call_llm(system_prompt_json, user_prompt_json)
+                        questions = json.loads(questions)
 
                     # Insert questions into database
                     # if isinstance(questions, list):
                     for question in questions:
                         # Validate question format
-                        if isinstance(question, dict) and 'question_text' in question and 'options' in question:
-                            try:
-                                question_id = str(uuid.uuid4())
-                                
-                                # Insert the question into the database
-                                question_result = supabase.table('questions').insert({
-                                    "id": question_id,
-                                    "study_plan_days_id": day_id,  # Use the day_id we got when inserting the day
-                                    "question_text": question.get('question_text', ''),
-                                    "options": question.get('options', []),
-                                    "correct_answer": question.get('correct_answer', ''),
-                                    "explanation": question.get('explanation', ''),
-                                    "topic": day.get('topics_for_the_day', ''),  # Use the day's topic
-                                    "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
-                                }).execute()
-                                
-                                print(f"Inserted question: {question_id}")
-                            except Exception as q_e:
-                                print(f"Error inserting question: {str(q_e)}")
+                        try:
+                            question_id = str(uuid.uuid4())
+                            
+                            # Insert the question into the database
+                            question_result = supabase.table('questions').insert({
+                                "id": question_id,
+                                "study_plan_days_id": day_ids_map[day_num],  # Use the day_id we got when inserting the day
+                                "question_text": question.get('question_text', ''),
+                                "options": question.get('options', []),
+                                "correct_answer": question.get('correct_answer', ''),
+                                "explanation": question.get('explanation', ''),
+                                "topic": day.get('topics_for_the_day', ''),  # Use the day's topic
+                                "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
+                            }).execute()
+                            
+                            print(f"Inserted question: {question_id}")
+                        except Exception as q_e:
+                            print(f"Error inserting question: {str(q_e)}")
                     # else:
                     #     print("No questions to insert - questions data is not a list")
                     
