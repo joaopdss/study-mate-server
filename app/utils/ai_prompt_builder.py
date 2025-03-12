@@ -220,7 +220,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
             {
             "day_num": 2,
             "topics_for_the_day": "Refining Inference Skills",
-            "subtopics": "Logical conclusions, Author’s assumptions, Evaluating evidence",
+            "subtopics": "Logical conclusions, Author's assumptions, Evaluating evidence",
             "description": "Reading comprehension moves beyond surface-level understanding once you begin to recognize implied ideas. Inference, or \"reading between the lines,\" involves identifying connections that aren't explicitly stated but are suggested by the context.\\n\\nFor instance, if an author frequently cites research about the negative effects of processed foods without ever mentioning potential benefits, you might infer a particular bias or focus on the drawbacks.\\n\\nEvaluating an author's bias is central to deep analysis. Pay attention to words that indicate strong emotional undertones, such as \"unfortunately\" or \"unquestionably.\" These can signal a subjective stance.\\n\\nSome texts may use a balanced approach, carefully laying out both pros and cons of an issue. Others might adopt a more persuasive tone, guiding you toward a specific conclusion through selective presentation of facts.\\n\\nRhetorical devices like analogies or metaphors can reveal an author's perspective. A passage about climate change might compare rising temperatures to \"a ticking time bomb,\" emphasizing urgency and potential catastrophe.\\n\\nLook also for the presence of qualifiers—terms like \"likely,\" \"suggests,\" or \"possibly.\" Their usage can indicate that the writer is hedging claims, which might make the argument more nuanced and less absolute.\\n\\nWhen you come across data or statistics, consider their source and how they're integrated. Do they come from peer-reviewed journals, reputable organizations, or anecdotal accounts? This evaluation helps determine the argument's credibility.\\n\\nBe aware of how authors structure their reasoning. A cause-and-effect argument might detail a phenomenon's root causes before outlining its consequences, while a compare-and-contrast approach alternates between two subjects or viewpoints.\\n\\nIf a passage includes counterarguments, note whether they're given fair representation. A writer might introduce opposing views only to dismiss them quickly, revealing a potential bias or a selective approach.\\n\\nAdvanced rhetorical devices, such as parallelism or strategic repetition, also shape how a message is received. Repeated words or phrases can emphasize an idea or evoke an emotional response, thus guiding the reader's interpretation.\\n\\nBy honing your inferential and analytical skills, you'll be equipped not just to understand the central thesis but also to critique the logic and evidence behind it.\\n\\nUltimately, deeper reading comprehension allows you to engage with texts on a level that goes beyond memorizing facts. You'll learn to question assumptions, weigh arguments, and form your own reasoned conclusions.",
             "resources": "Practice passages from official test-prep materials, Academic reading journals",
             "estimated_hours_needed": 2    
@@ -270,84 +270,40 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
 def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content):
     """
     Builds a quiz generation prompt for the LLM.
-    
-    Args:
-        quiz_request (dict): Quiz generation parameters
-        exam (Exam): The exam object for context
-        search_results (str, optional): Additional context from search API
-        materials_content (str, optional): Text extracted from exam materials
-        
-    Returns:
-        str: A formatted prompt for the LLM to generate a quiz
     """
 
     system_prompt = """
-    You are a scholarly assistant tasked with generating exactly 120 multiple choice questions for exam preparation. Please follow these steps:
+    You are an experienced exam-question developer with a strong background in crafting realistic, high-quality multiple-choice questions for a variety of standardized tests and professional certifications (e.g., TOEFL, AWS, math exams). Your goal is to produce exactly 120 questions that closely resemble the style, rigor, and format of real exam questions. You must adhere to the following requirements:
 
     1. **Quantity & Difficulty Distribution**:
-        - Total questions: 120
-        - 40 labeled "easy"
-        - 40 labeled "medium"
-        - 40 labeled "hard"
+    - Total questions to generate: 120
+    - Difficulty categories: 
+        • 40 labeled "easy"
+        • 40 labeled "medium"
+        • 40 labeled "hard"
+    - Ensure the difficulty labeling (easy, medium, hard) aligns with realistic exam standards:
+        - "easy" questions focus on fundamental concepts or straightforward applications.
+        - "medium" questions involve moderate complexity, partial application of concepts, or multi-step reasoning.
+        - "hard" questions require deeper analysis, advanced reasoning, or intricate problem-solving.
 
     2. **Content**:
-        - Base each question on: topic, subtopics, search_about_exam, and exam_materials.
-        - Ensure relevance to the specified topic/subtopics and any provided exam details.
+    - Base each question on:
+        • The topic and subtopics provided.
+        • The "web information about the exam" (i.e., official guidelines, formats, key domains).
+        • The "exam materials" or other provided study references.
+    - Incorporate realistic exam scenarios, referencing standard terminology or question phrasing common to the specified exam type.
+    - Avoid copying any proprietary or copyrighted exam questions verbatim; instead, craft original questions that approximate the style and rigor of official exam content.
 
-    3. **Format (JSON)**:
-        - Return an array of 120 question objects in valid JSON (no extra text or commentary).
-        - Each object must have:
-            {
-            "question_text": "string",
-            "options": [
-                { "option": "A", "text": "string" },
-                { "option": "B", "text": "string" },
-                { "option": "C", "text": "string" },
-                { "option": "D", "text": "string" }
-            ],
-            "correct_answer": "A" | "B" | "C" | "D",
-            "explanation": "1–3 sentences justifying the correct answer",
-            "difficulty": "easy" | "medium" | "hard"
-            }
+    3. **Question Style & Quality**:
+    - Use clear, concise language.
+    - Write each question stem in a way that directly tests knowledge or application of the specified topic/subtopics.
+    - Provide four answer options (A, B, C, D). Each distractor (incorrect option) must be plausible yet clearly incorrect upon deeper analysis.
+    - Use domain-appropriate examples and references (e.g., academic passages for TOEFL, AWS service use-cases, mathematical formulations, etc.).
+    - For each question, select exactly one correct answer and explain in 1–3 sentences why that answer is correct.
 
-    4. **JSON Validity**:
-        - All keys must be enclosed in quotes without extra spaces or quotes (e.g., "options", not "    \"options\"").
-        - Do not include any trailing commas, backticks, or markdown syntax.
-        - The final JSON must parse correctly with standard libraries.
-
-    5. **Final Output**:
-        - Provide an array of exactly 120 question objects.
-        - Distribute them as 40 easy, 40 medium, and 40 hard questions.
-        - Use clear, domain-appropriate language and keep each question concise yet aligned with the specified material.
-
-    Example of a single question object:
-
-        {
-        "question_text": "Which of the following best describes the First Law of Thermodynamics?",
-        "options": [
-            { "option": "A", "text": "Energy cannot be created or destroyed, only transformed." },
-            { "option": "B", "text": "It explains how entropy tends to increase in an isolated system." },
-            { "option": "C", "text": "It focuses on the concept of absolute zero temperature." },
-            { "option": "D", "text": "It deals with heat transfer via conduction and radiation." }
-        ],
-        "correct_answer": "A",
-        "explanation": "The First Law is also known as the principle of conservation of energy.",
-        "difficulty": "easy"
-        }
-    """
-    
-    prompt = f"""
-    Topic: {topics_for_the_day}
-    Subtopics: {subtopics}
-    Web information about the exam: {search_results}
-    Exam materials: {materials_content}
-
-    I need 120 multiple choice questions based on the above details, make sure to generate questions based on the topic and subtopics, using the information of web information and exam materials as a reference:
-    - 40 easy questions
-    - 40 medium questions
-    - 40 hard questions
-
-    Please provide each question in valid JSON with the following structure:
+    4. **JSON Format & Validity**:
+    - Output must be a single JSON array of 120 objects.
+    - Each object must follow this structure:
         {{
         "question_text": "string",
         "options": [
@@ -357,11 +313,48 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
             {{ "option": "D", "text": "string" }}
         ],
         "correct_answer": "A" | "B" | "C" | "D",
-        "explanation": "string",
+        "explanation": "1–3 sentence explanation",
         "difficulty": "easy" | "medium" | "hard"
         }}
+    - Ensure all keys are enclosed in standard double quotes with no trailing commas or special formatting. The final JSON must be valid and parseable.
 
-    Return your answer as a JSON array of 120 objects, with no additional commentary or formatting.
+    5. **Final Output**:
+    - Return only the JSON array of 120 question objects (no additional commentary, markdown, or extra text).
+    - Respect the exact distribution: 40 "easy", 40 "medium", 40 "hard".
+    - Make sure your output is logically consistent, relevant, and helpful for exam preparation.
+    """
+    
+    prompt = f"""
+    Topic: {topics_for_the_day}
+    Subtopics: {subtopics}
+    Web information about the exam: {search_results}
+    Exam materials: {materials_content}
+
+    I need 120 multiple-choice questions that reflect realistic exam conditions and difficulty levels, based on the topic and subtopics above. Please:
+
+    1. Use the information from the web search and exam materials to guide the style, focus, and complexity of the questions.
+    2. Label exactly 40 questions as "easy," 40 as "medium," and 40 as "hard."
+    3. For each question:
+    - Provide a clear, concise question stem testing a single main concept or skill.
+    - Offer four distinct options: A, B, C, D.
+    - Identify one correct answer.
+    - Explain why the answer is correct in 1–3 sentences.
+    4. Return your answer as a **single valid JSON array** containing exactly 120 objects, each following the structure:
+
+    {{
+    "question_text": "string",
+    "options": [
+        {{ "option": "A", "text": "string" }},
+        {{ "option": "B", "text": "string" }},
+        {{ "option": "C", "text": "string" }},
+        {{ "option": "D", "text": "string" }}
+    ],
+    "correct_answer": "A" | "B" | "C" | "D",
+    "explanation": "string",
+    "difficulty": "easy" | "medium" | "hard"
+    }}
+
+    5. Provide **no additional commentary** or formatting outside the JSON. Ensure the final JSON parses correctly and strictly contains 120 objects.
     """
     
     return system_prompt, prompt 
