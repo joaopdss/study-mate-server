@@ -6,12 +6,38 @@ import json
 import requests
 from typing import Dict, Any, Optional, List, Union
 from openai import OpenAI
+from pydantic import BaseModel
+from typing import Literal, List
+
+class DayTopic(BaseModel):
+    day_num: int
+    topics_for_the_day: str
+    subtopics: str
+    description: str
+    resources: str
+    estimated_hours_needed: int
+
+class StudyPlan(BaseModel):
+    overview: str
+    day_topics: List[DayTopic]
+
+class Option(BaseModel):
+    option: Literal['A', 'B', 'C', 'D']
+    text: str
+
+class Question(BaseModel):
+    question_text: str
+    options: list[Option]
+    correct_answer: Literal['A', 'B', 'C', 'D']
+    explanation: str
+    difficulty: Literal['easy', 'medium', 'hard']
+
 
 # Load API key from environment variables
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 OPENAI_API_URL = "https://api.openai.com/v1"
 
-def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, model: str = "o3-mini") -> Optional[str]:
+def call_llm(system_prompt: str, user_prompt: str, ret_format: str, temperature: float = 0.7, model: str = "o3-mini") -> Optional[str]:
     """
     Makes a call to the OpenAI API.
     
@@ -33,11 +59,12 @@ def call_llm(system_prompt: str, user_prompt: str, temperature: float = 0.7, mod
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            reasoning_effort="low"
+            reasoning_effort="low",
+            response_format={ "type": "json_object" }
         )
         
         print(f"Response obtained")
-        return response.choices[0].message.content  
+        return response.choices[0].message.content 
 
     except Exception as e:
         print(f"Error in call_llm: {str(e)}")
@@ -53,7 +80,7 @@ def generate_study_plan(system_prompt: str, user_prompt: str):
     Returns:
         dict: Parsed study plan data or None if generation failed
     """
-    response = call_llm(system_prompt, user_prompt)
+    response = call_llm(system_prompt, user_prompt, "StudyPlan")
     if not response:
         return None
     
@@ -175,7 +202,7 @@ def generate_quiz(system_prompt: str, prompt: str) -> Optional[List[Dict[str, An
     Returns:
         list: List of question objects or None if generation failed
     """
-    response = call_llm(system_prompt, prompt)
+    response = call_llm(system_prompt, prompt, "Question")
     
     return response
     

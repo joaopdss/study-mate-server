@@ -41,12 +41,23 @@ def build_exam_search_prompt(exam_title: str, exam_country: str, topics: List[st
     Returns:
         str: A formatted search prompt
     """
-    prompt = f"Find official or widely recognized information about the {exam_title} in {exam_country}"
-    prompt += f" for {educational_level} students"
-    prompt += ".\nInclude important details such as exam format, recommended topics, common resources, sample questions, and any official guidelines."
-    prompt += f"\nThe exam covers the following topics: {topics}."
-    prompt += "\nReturn the most relevant, accurate, and up-to-date sources."
-    prompt += "\nMake sure to include sample of at least 10 real questions from the exam."
+    prompt = f"""Find official or widely recognized information about the {exam_title} in {exam_country} for {educational_level} students. 
+    Include all important details such as:
+    - Exam format (sections, duration, number of questions/tasks)
+    - Recommended topics and preparation strategies
+    - Common or reputable study resources
+    - Official guidelines (registration, scoring, rules, and recent updates)
+    - Any other relevant, up-to-date details
+
+    The exam covers the following topics: {topics}.
+
+    Provide at least 20 representative sample questions in multiple-choice format that reflect the actual exam’s style. 
+    If the exam is known for reading comprehension or scenario-based questions (e.g., TOEFL Reading, AWS case studies), 
+    include a short passage or scenario (1–3 paragraphs) in each question if relevant. 
+    If no passage is needed for a particular question type, leave the passage field empty or omit it entirely.
+
+    If you reference real, copyrighted questions, rewrite them in your own words or include official links where they can be accessed legally. 
+    Return only the most relevant, accurate, and current sources and details."""
     
     
     if materials_content:
@@ -273,55 +284,47 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     """
 
     system_prompt = """
-    You are an experienced exam-question developer with a strong background in crafting realistic, high-quality multiple-choice questions for a variety of standardized tests and professional certifications (e.g., TOEFL, AWS, math exams). Your goal is to produce exactly 120 questions that closely resemble the style, rigor, and format of real exam questions. You must adhere to the following requirements:
+    You are an advanced exam-question generator with expertise in crafting multiple-choice questions. Your tasks include:
 
-    1. **Quantity & Difficulty Distribution**:
-    - Total questions to generate: 120
-    - Difficulty categories: 
-        • 40 labeled "easy"
-        • 40 labeled "medium"
-        • 40 labeled "hard"
-    - Ensure the difficulty labeling (easy, medium, hard) aligns with realistic exam standards:
-        - "easy" questions focus on fundamental concepts or straightforward applications.
-        - "medium" questions involve moderate complexity, partial application of concepts, or multi-step reasoning.
-        - "hard" questions require deeper analysis, advanced reasoning, or intricate problem-solving.
+    1. **Overall Requirements**:
+    - Generate exactly 120 multiple-choice questions in total.
+    - Label exactly 40 questions as "easy," 40 as "medium," and 40 as "hard."
+    - Each question must follow the structure below.
 
-    2. **Content**:
-    - Base each question on:
-        • The topic and subtopics provided.
-        • The "web information about the exam" (i.e., official guidelines, formats, key domains).
-        • The "exam materials" or other provided study references.
-    - Incorporate realistic exam scenarios, referencing standard terminology or question phrasing common to the specified exam type.
-    - Avoid copying any proprietary or copyrighted exam questions verbatim; instead, craft original questions that approximate the style and rigor of official exam content.
-
-    3. **Question Style & Quality**:
-    - Use clear, concise language.
-    - Write each question stem in a way that directly tests knowledge or application of the specified topic/subtopics.
-    - Provide four answer options (A, B, C, D). Each distractor (incorrect option) must be plausible yet clearly incorrect upon deeper analysis.
-    - Use domain-appropriate examples and references (e.g., academic passages for TOEFL, AWS service use-cases, mathematical formulations, etc.).
-    - For each question, select exactly one correct answer and explain in 1–3 sentences why that answer is correct.
-
-    4. **JSON Format & Validity**:
-    - Output must be a single JSON array of 120 objects.
-    - Each object must follow this structure:
-        {{
+    2. **Question Structure**:
+    - Each question must be returned as a JSON object with the keys:
+        {
+        "passage": "string",
         "question_text": "string",
         "options": [
-            {{ "option": "A", "text": "string" }},
-            {{ "option": "B", "text": "string" }},
-            {{ "option": "C", "text": "string" }},
-            {{ "option": "D", "text": "string" }}
+            { "option": "A", "text": "string" },
+            { "option": "B", "text": "string" },
+            { "option": "C", "text": "string" },
+            { "option": "D", "text": "string" }
         ],
         "correct_answer": "A" | "B" | "C" | "D",
-        "explanation": "1–3 sentence explanation",
+        "explanation": "string",
         "difficulty": "easy" | "medium" | "hard"
-        }}
-    - Ensure all keys are enclosed in standard double quotes with no trailing commas or special formatting. The final JSON must be valid and parseable.
+        }
 
-    5. **Final Output**:
-    - Return only the JSON array of 120 question objects (no additional commentary, markdown, or extra text).
-    - Respect the exact distribution: 40 "easy", 40 "medium", 40 "hard".
-    - Make sure your output is logically consistent, relevant, and helpful for exam preparation.
+    3. **Passage Field**:
+    - If the exam context requires reading comprehension or scenario-based reasoning, include a short text (1–3 paragraphs) in the "passage" field to provide context for the question.
+    - If no passage is necessary for a given question, set the "passage" field to an empty string ("").
+
+    4. **Content & Relevance**:
+    - Base each question on the provided exam context, including any topics, subtopics, or exam guidelines. 
+    - If a passage is included, ensure the question is derived from or references details within that passage.
+    - Make distractors plausible yet clearly incorrect upon deeper analysis.
+
+    5. **Difficulty Calibration**:
+    - "Easy" questions can focus on fundamental concepts or straightforward applications.
+    - "Medium" questions may involve moderate complexity or multi-step reasoning.
+    - "Hard" questions should require deeper analysis or advanced skills.
+
+    6. **Final Output**:
+    - Return your answer as a single JSON array of 120 objects.
+    - Provide no additional commentary or text outside the JSON.
+    - The JSON must be valid and parseable with standard libraries.
     """
     
     prompt = f"""
@@ -330,31 +333,34 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     Web information about the exam: {search_results}
     Exam materials: {materials_content}
 
-    I need 120 multiple-choice questions that reflect realistic exam conditions and difficulty levels, based on the topic and subtopics above. Please:
+    Please generate 120 multiple-choice questions (40 easy, 40 medium, 40 hard) based on the above context. Follow these instructions:
 
-    1. Use the information from the web search and exam materials to guide the style, focus, and complexity of the questions.
-    2. Label exactly 40 questions as "easy," 40 as "medium," and 40 as "hard."
-    3. For each question:
-    - Provide a clear, concise question stem testing a single main concept or skill.
-    - Offer four distinct options: A, B, C, D.
-    - Identify one correct answer.
-    - Explain why the answer is correct in 1–3 sentences.
-    4. Return your answer as a **single valid JSON array** containing exactly 120 objects, each following the structure:
+    1. **Passage (Optional)**:
+    - If the question requires a short reading passage or scenario (e.g., TOEFL Reading, scenario-based AWS questions, etc.), include 1–3 paragraphs of text in the "passage" field.
+    - If no passage is necessary (e.g., straightforward math questions), leave the "passage" field as an empty string.
 
-    {{
-    "question_text": "string",
-    "options": [
-        {{ "option": "A", "text": "string" }},
-        {{ "option": "B", "text": "string" }},
-        {{ "option": "C", "text": "string" }},
-        {{ "option": "D", "text": "string" }}
-    ],
-    "correct_answer": "A" | "B" | "C" | "D",
-    "explanation": "string",
-    "difficulty": "easy" | "medium" | "hard"
-    }}
+    2. **Question Format**:
+    - Each question must be a JSON object with the following keys:
+        {{
+        "passage": "string",
+        "question_text": "string",
+        "options": [
+            {{ "option": "A", "text": "string" }},
+            {{ "option": "B", "text": "string" }},
+            {{ "option": "C", "text": "string" }},
+            {{ "option": "D", "text": "string" }}
+        ],
+        "correct_answer": "A" | "B" | "C" | "D",
+        "explanation": "string",
+        "difficulty": "easy" | "medium" | "hard"
+        }}
 
-    5. Provide **no additional commentary** or formatting outside the JSON. Ensure the final JSON parses correctly and strictly contains 120 objects.
-    """
+    3. **Difficulty Distribution**:
+    - Exactly 40 "easy," 40 "medium," and 40 "hard" questions.
+
+    4. **Output**:
+    - Return all 120 questions as a single JSON array (no extra commentary or formatting).
+    - Make sure the JSON is valid (no trailing commas, properly escaped quotes, etc.).
+        """
     
     return system_prompt, prompt 

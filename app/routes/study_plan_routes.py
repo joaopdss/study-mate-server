@@ -93,6 +93,7 @@ def generate_plan():
                 print(f"JSON parsing error: {str(e)}")
                 return jsonify({"error": f"Invalid study plan data format: {str(e)}"}), 500
         
+        print(type(study_plan_data))
         print("Inserting study plan into Supabase")
         # Generate a new UUID for the study plan
         study_plan_id = str(uuid.uuid4())
@@ -168,24 +169,25 @@ def generate_plan():
                     # print(f"Questions generated: {len(questions) if isinstance(questions, list) else 'Error: Not a list'}")
 
                     # Parse JSON if it's returned as a string
-                    # if isinstance(questions, str):
-                    try:
-                        questions = json.loads(questions)
-                    except json.JSONDecodeError as e:
-                        print(f"Failed to parse questions JSON: {str(e)}")
-                        print(f"Trying to fix JSON")
-                        system_prompt_json, user_prompt_json = build_prompt_to_validate_json(questions)
-                        
-                        questions = call_llm(system_prompt_json, user_prompt_json)
-                        questions = json.loads(questions)
+                    if isinstance(questions, str):
+                        try:
+                            print("entrou")
+                            questions = json.loads(questions)
+                        except json.JSONDecodeError as e:
+                            print(f"Failed to parse questions JSON: {str(e)}")
+                            print(f"Trying to fix JSON")
+                            system_prompt_json, user_prompt_json = build_prompt_to_validate_json(questions)
+                            
+                            questions = call_llm(system_prompt_json, user_prompt_json)
+                            questions = json.loads(questions)
 
+                    print(type(questions))
                     # Insert questions into database
                     # if isinstance(questions, list):
-                    for question in questions:
+                    for question in questions['questions']:
                         # Validate question format
                         try:
                             question_id = str(uuid.uuid4())
-                            
                             # Insert the question into the database
                             question_result = supabase.table('questions').insert({
                                 "id": question_id,
@@ -194,7 +196,7 @@ def generate_plan():
                                 "options": question.get('options', []),
                                 "correct_answer": question.get('correct_answer', ''),
                                 "explanation": question.get('explanation', ''),
-                                "topic": day.get('topics_for_the_day', ''),  # Use the day's topic
+                                "topic": topics_for_the_day,  # Use the day's topic
                                 "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
                             }).execute()
                             
