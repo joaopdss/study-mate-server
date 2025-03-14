@@ -284,15 +284,20 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     """
 
     system_prompt = """
-    You are an advanced exam-question generator with expertise in crafting multiple-choice questions. Your tasks include:
+    You are an advanced exam-question generator tasked with creating high-quality, realistic multiple-choice questions for any standardized or professional exam. Follow these guidelines:
 
-    1. **Overall Requirements**:
-    - Generate exactly 120 multiple-choice questions in total.
-    - Label exactly 40 questions as "easy," 40 as "medium," and 40 as "hard."
-    - Each question must follow the structure below.
+    1. **Quantity & Difficulty Distribution**:
+    - Produce exactly 120 multiple-choice questions.
+    - Label 40 questions as "easy," 40 as "medium," and 40 as "hard."
 
-    2. **Question Structure**:
-    - Each question must be returned as a JSON object with the keys:
+    2. **Passage or Scenario (If Needed)**:
+    - For exams that benefit from reading or scenario-based contexts (e.g., TOEFL Reading, scenario-based certifications), include a short passage or scenario (2–3 paragraphs). 
+        - Passages/scenarios should reflect **complexity and nuance**, including varied sentence structures, multiple ideas, and relevant domain-appropriate vocabulary.
+        - Incorporate different tones or perspectives if applicable to simulate authentic test materials.
+    - If a passage/scenario is not required (e.g., simple math computations), leave the "passage" field empty or a brief statement.
+
+    3. **Question Structure**:
+    - Each question must be a JSON object with the following fields:
         {
         "passage": "string",
         "question_text": "string",
@@ -307,24 +312,22 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
         "difficulty": "easy" | "medium" | "hard"
         }
 
-    3. **Passage Field**:
-    - If the exam context requires reading comprehension or scenario-based reasoning, include a short text (1–3 paragraphs) in the "passage" field to provide context for the question.
-    - If no passage is necessary for a given question, set the "passage" field to an empty string ("").
-
-    4. **Content & Relevance**:
-    - Base each question on the provided exam context, including any topics, subtopics, or exam guidelines. 
-    - If a passage is included, ensure the question is derived from or references details within that passage.
-    - Make distractors plausible yet clearly incorrect upon deeper analysis.
+    4. **Alignment with Feedback**:
+    - **Relevance to Passage/Scenario**: Ensure each question directly tests comprehension or application of the passage/scenario. 
+    - **Analytical Depth & Critical Thinking**: Incorporate questions that require analysis, inference, understanding the author’s or scenario’s intent, or evaluating data/arguments.
+    - **Plausible Distractors**: Make incorrect answers sound reasonable but clearly wrong upon careful reading or deeper thought.
+    - **Variety in Question Types**: Include questions that assess main ideas, details, inferences, tone/perspective, application of concepts, etc. 
+    - **Clear, Concise Language**: Use precise phrasing for both questions and answer choices, avoiding ambiguous wording.
 
     5. **Difficulty Calibration**:
-    - "Easy" questions can focus on fundamental concepts or straightforward applications.
-    - "Medium" questions may involve moderate complexity or multi-step reasoning.
-    - "Hard" questions should require deeper analysis or advanced skills.
+    - "Easy" questions focus on fundamental concepts or straightforward retrieval of information.
+    - "Medium" questions involve moderate reasoning, multi-step logic, or partial analysis of the passage/scenario.
+    - "Hard" questions should require deeper understanding, interpretation of nuanced details, or advanced conceptual reasoning.
 
     6. **Final Output**:
-    - Return your answer as a single JSON array of 120 objects.
-    - Provide no additional commentary or text outside the JSON.
-    - The JSON must be valid and parseable with standard libraries.
+    - Return a single JSON array of 120 objects (no additional text, commentary, or formatting).
+    - The JSON must be valid (no trailing commas, properly quoted strings, etc.).
+    - Each question must follow the above structure exactly.
     """
     
     prompt = f"""
@@ -333,13 +336,21 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     Web information about the exam: {search_results}
     Exam materials: {materials_content}
 
-    Please generate 120 multiple-choice questions (40 easy, 40 medium, 40 hard) based on the above context. Follow these instructions:
+    Please generate 120 multiple-choice questions (40 easy, 40 medium, 40 hard) based on the context provided. Follow these requirements:
 
-    1. **Passage (Optional)**:
-    - If the question requires a short reading passage or scenario (e.g., TOEFL Reading, scenario-based AWS questions, etc.), include 1–3 paragraphs of text in the "passage" field.
-    - If no passage is necessary (e.g., straightforward math questions), leave the "passage" field as an empty string.
+    1. **Passage or Scenario**:
+    - If the exam requires reading comprehension or scenario-based reasoning, include a short passage or scenario (1–3 paragraphs) to provide context. Make the passage:
+        - Complex and nuanced, with varied sentence structures and relevant vocabulary.
+        - Possibly featuring different tones or perspectives.
+    - If a passage is not needed for a certain question type (e.g., simple math or direct concept questions), leave the "passage" field empty.
 
-    2. **Question Format**:
+    2. **Question Quality**:
+    - Ensure each question directly relates to the passage/scenario (if provided) or to the exam content (if no passage is used).
+    - Incorporate analytical depth and critical thinking: ask about main ideas, inferences, argument evaluation, or real-world application.
+    - Include plausible distractors that reflect common misunderstandings but are still incorrect.
+
+
+    3. **Question Format**:
     - Each question must be a JSON object with the following keys:
         {{
         "passage": "string",
@@ -355,12 +366,11 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
         "difficulty": "easy" | "medium" | "hard"
         }}
 
-    3. **Difficulty Distribution**:
-    - Exactly 40 "easy," 40 "medium," and 40 "hard" questions.
+    4. **Output Format**:
+    - Return exactly 120 questions in a valid JSON array (no additional commentary).
+    - Maintain the 40/40/40 distribution of easy, medium, and hard questions.
 
-    4. **Output**:
-    - Return all 120 questions as a single JSON array (no extra commentary or formatting).
-    - Make sure the JSON is valid (no trailing commas, properly escaped quotes, etc.).
+    Focus on producing rich, realistic questions that challenge understanding and application of the given topics.
         """
     
     return system_prompt, prompt 

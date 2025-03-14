@@ -188,15 +188,25 @@ def generate_plan():
                         # Validate question format
                         try:
                             question_id = str(uuid.uuid4())
+                            topic_value = topics_for_the_day
+                            # If topic is a list, extract just the string
+                            if isinstance(topic_value, list):
+                                topic_value = topic_value[0] if topic_value else ""
+                            # If it's still a string with brackets and quotes, remove them
+                            if isinstance(topic_value, str) and topic_value.startswith('[') and topic_value.endswith(']'):
+                                # Strip the brackets and quotes
+                                topic_value = topic_value.strip('[]"\'')
+
                             # Insert the question into the database
                             question_result = supabase.table('questions').insert({
                                 "id": question_id,
                                 "study_plan_days_id": day_ids_map[day_num],  # Use the day_id we got when inserting the day
+                                "passage": question.get('passage', ''),
                                 "question_text": question.get('question_text', ''),
                                 "options": question.get('options', []),
                                 "correct_answer": question.get('correct_answer', ''),
                                 "explanation": question.get('explanation', ''),
-                                "topic": topics_for_the_day,  # Use the day's topic
+                                "topic": topic_value,  # Now it's just the string without brackets
                                 "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
                             }).execute()
                             
