@@ -291,7 +291,7 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - Label 40 questions as "easy," 40 as "medium," and 40 as "hard."
 
     2. **Passage or Scenario (If Needed)**:
-    - For exams that benefit from reading or scenario-based contexts (e.g., TOEFL Reading, scenario-based certifications), include a short passage or scenario (2–3 paragraphs). 
+    - For exams that benefit from reading or scenario-based contexts (e.g., TOEFL Reading, scenario-based certifications), include a medium size passage or scenario (3-5 paragraphs). 
         - Passages/scenarios should reflect **complexity and nuance**, including varied sentence structures, multiple ideas, and relevant domain-appropriate vocabulary.
         - Incorporate different tones or perspectives if applicable to simulate authentic test materials.
     - If a passage/scenario is not required (e.g., simple math computations), leave the "passage" field empty or a brief statement.
@@ -315,14 +315,20 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     4. **Alignment with Feedback**:
     - **Relevance to Passage/Scenario**: Ensure each question directly tests comprehension or application of the passage/scenario. 
     - **Analytical Depth & Critical Thinking**: Incorporate questions that require analysis, inference, understanding the author’s or scenario’s intent, or evaluating data/arguments.
-    - **Plausible Distractors**: Make incorrect answers sound reasonable but clearly wrong upon careful reading or deeper thought.
+    - **Plausible Distractors**: 
+        - Make incorrect answers sound reasonable and relevant, not trivially dismissible.
+        - Especially for medium and hard questions, ensure distractors address common misconceptions, partial truths, or misinterpretations.
     - **Variety in Question Types**: Include questions that assess main ideas, details, inferences, tone/perspective, application of concepts, etc. 
     - **Clear, Concise Language**: Use precise phrasing for both questions and answer choices, avoiding ambiguous wording.
 
-    5. **Difficulty Calibration**:
-    - "Easy" questions focus on fundamental concepts or straightforward retrieval of information.
-    - "Medium" questions involve moderate reasoning, multi-step logic, or partial analysis of the passage/scenario.
-    - "Hard" questions should require deeper understanding, interpretation of nuanced details, or advanced conceptual reasoning.
+    5. **Even Distribution of Correct Answers**:
+    - Across all 120 questions, ensure that each option (A, B, C, D) appears as the correct answer in roughly equal proportions.
+    - Avoid patterns where one letter (e.g., "B") is disproportionately used as the correct answer.
+
+    6. **Difficulty Calibration**:
+    - "Easy" questions: straightforward retrieval of information or fundamental concepts.
+    - "Medium" questions: moderate reasoning, multi-step logic, or partial analysis.
+    - "Hard" questions: deeper, more nuanced reasoning, interpretation of subtleties, or advanced conceptual understanding.
 
     6. **Final Output**:
     - Return a single JSON array of 120 objects (no additional text, commentary, or formatting).
@@ -339,16 +345,19 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     Please generate 120 multiple-choice questions (40 easy, 40 medium, 40 hard) based on the context provided. Follow these requirements:
 
     1. **Passage or Scenario**:
-    - If the exam requires reading comprehension or scenario-based reasoning, include a short passage or scenario (1–3 paragraphs) to provide context. Make the passage:
+    - If the exam requires reading comprehension or scenario-based reasoning, include a short passage or scenario (3-5 paragraphs) to provide context. Make the passage:
         - Complex and nuanced, with varied sentence structures and relevant vocabulary.
         - Possibly featuring different tones or perspectives.
     - If a passage is not needed for a certain question type (e.g., simple math or direct concept questions), leave the "passage" field empty.
 
-    2. **Question Quality**:
+    2. **Question Quality & Depth**:
     - Ensure each question directly relates to the passage/scenario (if provided) or to the exam content (if no passage is used).
-    - Incorporate analytical depth and critical thinking: ask about main ideas, inferences, argument evaluation, or real-world application.
-    - Include plausible distractors that reflect common misunderstandings but are still incorrect.
+    - Incorporate analytical depth and critical thinking by asking about main ideas, inferences, argument evaluation, real-world application, or advanced conceptual reasoning.
+    - **Plausible Distractors**: Create incorrect answers that reflect common misconceptions or partial truths so they are not easily eliminated. Especially for medium/hard questions, distractors should be sophisticated enough to challenge test-takers.
 
+    3. **Even Distribution of Correct Answers**:
+    - Across all 120 questions, ensure the correct answer is evenly distributed among options "A", "B", "C", and "D". 
+    - Avoid patterns where one letter is correct disproportionately.
 
     3. **Question Format**:
     - Each question must be a JSON object with the following keys:
@@ -371,6 +380,6 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - Maintain the 40/40/40 distribution of easy, medium, and hard questions.
 
     Focus on producing rich, realistic questions that challenge understanding and application of the given topics.
-        """
+    """
     
     return system_prompt, prompt 

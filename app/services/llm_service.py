@@ -9,6 +9,7 @@ from openai import OpenAI
 from pydantic import BaseModel
 from typing import Literal, List
 
+
 class DayTopic(BaseModel):
     day_num: int
     topics_for_the_day: str
@@ -64,7 +65,7 @@ def call_llm(system_prompt: str, user_prompt: str, ret_format: str, temperature:
         )
         
         print(f"Response obtained")
-        return response.choices[0].message.content 
+        return response.choices[0].message.content
 
     except Exception as e:
         print(f"Error in call_llm: {str(e)}")
