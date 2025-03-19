@@ -65,7 +65,7 @@ def build_exam_search_prompt(exam_title: str, exam_country: str, topics: List[st
         
     return prompt
 
-def build_study_plan_prompt(exam, search_results=None, materials_content=None):
+def build_study_plan_prompt(exam, search_results=None, materials_content=None, amount_of_days=1):
     """
     Builds a study plan generation prompt for the LLM.
     
@@ -168,7 +168,8 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None):
     The exam is on {exam.exam_date}, today is {today_date}. User's goal score: {exam.goal_score}.
     Proficiency level: {exam.proficiency}.
     Topics to study: {topics_str}.
-    The user can study {exam.hours_per_day} hours per day on the following days: {exam.study_schedule}.
+    The user can study {exam.hours_per_day} hours per day.
+    Create a study plan for {amount_of_days} days.
 
     Please provide a structured plan for each day until the exam date. 
     Each day should include specific topics, recommended resources, and time estimates.

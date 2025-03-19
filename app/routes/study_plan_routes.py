@@ -13,8 +13,98 @@ from datetime import datetime
 from app.utils.ai_prompt_builder import build_quiz_prompt
 from app.services.llm_service import generate_quiz
 from app.services.llm_service import call_llm
+import threading
 
 study_plan_bp = Blueprint('study_plan', __name__)
+
+# Function to generate quizzes in the background
+def generate_quizzes_background(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content):
+    """
+    Function to generate quizzes for a study plan in the background.
+    
+    Args:
+        study_plan_id (str): The ID of the study plan
+        study_plan_data (dict): The study plan data
+        day_ids_map (dict): Mapping of day numbers to day IDs
+        search_results (str): Search results from Perplexity
+        materials_content (str): Content from PDF materials
+    """
+    try:
+        print(f"Starting background quiz generation for study plan: {study_plan_id}")
+        supabase = get_supabase_client()
+        
+        # Create quizzes for each day of the study plan
+        for day in study_plan_data.get('day_topics', []):
+            # Create request data for the quiz generation
+            day_num = day.get('day_num', 0)
+            topics_for_the_day = [day.get('topics_for_the_day', '')]
+            subtopics = day.get('subtopics', '')
+            
+            print(f"Generating quiz for day {day_num} with topics: {topics_for_the_day}")
+            
+            try:                    
+                # Build prompt for quiz generation
+                system_prompt, prompt = build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content)
+                
+                # Generate quiz
+                questions = generate_quiz(system_prompt, prompt)
+                
+                print(questions)
+
+                # Parse JSON if it's returned as a string
+                if isinstance(questions, str):
+                    try:
+                        print("entrou")
+                        questions = json.loads(questions)
+                    except json.JSONDecodeError as e:
+                        print(f"Failed to parse questions JSON: {str(e)}")
+                        print(f"Trying to fix JSON")
+                        system_prompt_json, user_prompt_json = build_prompt_to_validate_json(questions)
+                        
+                        questions = call_llm(system_prompt_json, user_prompt_json)
+                        questions = json.loads(questions)
+
+                print(type(questions))
+                
+                # Insert questions into database
+                for question in questions['questions']:
+                    # Validate question format
+                    try:
+                        question_id = str(uuid.uuid4())
+                        topic_value = topics_for_the_day
+                        # If topic is a list, extract just the string
+                        if isinstance(topic_value, list):
+                            topic_value = topic_value[0] if topic_value else ""
+                        # If it's still a string with brackets and quotes, remove them
+                        if isinstance(topic_value, str) and topic_value.startswith('[') and topic_value.endswith(']'):
+                            # Strip the brackets and quotes
+                            topic_value = topic_value.strip('[]"\'')
+
+                        # Insert the question into the database
+                        question_result = supabase.table('questions').insert({
+                            "id": question_id,
+                            "study_plan_days_id": day_ids_map[day_num],  # Use the day_id we got when inserting the day
+                            "passage": question.get('passage', ''),
+                            "question_text": question.get('question_text', ''),
+                            "options": question.get('options', []),
+                            "correct_answer": question.get('correct_answer', ''),
+                            "explanation": question.get('explanation', ''),
+                            "topic": topic_value,  # Now it's just the string without brackets
+                            "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
+                        }).execute()
+                        
+                        print(f"Inserted question: {question_id}")
+                    except Exception as q_e:
+                        print(f"Error inserting question: {str(q_e)}")
+                
+                print(f"Successfully generated questions for day {day_num}")
+                
+            except Exception as quiz_e:
+                print(f"Error generating quiz for day {day_num}: {str(quiz_e)}")
+                
+        print(f"Background quiz generation completed for study plan: {study_plan_id}")
+    except Exception as e:
+        print(f"Error in background task: {str(e)}")
 
 @study_plan_bp.route('/plan/generate', methods=['POST'])
 def generate_plan():
@@ -26,6 +116,7 @@ def generate_plan():
         # Get JSON data from request
         data = request.get_json()
         exam_id = data.get('exam_id')
+        amount_of_days = data.get('amount_of_days', 1)
         include_internet_search = data.get('include_internet_search', True)
         
         if not exam_id:
@@ -71,7 +162,7 @@ def generate_plan():
         )
         
         print("Creating plan prompt")
-        system_prompt, user_prompt = build_study_plan_prompt(exam, search_results, materials_content)
+        system_prompt, user_prompt = build_study_plan_prompt(exam, search_results, materials_content, amount_of_days)
 
         print(f"Search results: /n/n{search_results}")
         
@@ -144,91 +235,32 @@ def generate_plan():
                     "created_at": current_timestamp
                 }).execute()
                 print(f"Inserted day {day.get('day_num', 0)} with ID: {day_id}")
-                
-            # After successfully generating the study plan, generate quizzes
-            print("Study plan created successfully. Now generating quizzes...")
             
-            # No need to import generate_quiz_endpoint, we're implementing it directly
-            # Create quizzes for each day of the study plan
-            for day in study_plan_data.get('day_topics', []):
-                # Create request data for the quiz generation
-                day_num = day.get('day_num', 0)
-                topics_for_the_day = [day.get('topics_for_the_day', '')]
-                subtopics = day.get('subtopics', '')
-                
-                print(f"Generating quiz for day {day_num} with topics: {topics_for_the_day}")
-                
-                try:                    
-                    # Build prompt for quiz generation
-                    system_prompt, prompt = build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content)
-                    
-                    # Generate quiz
-                    questions = generate_quiz(system_prompt, prompt)
-                    
-                    print(questions)
-                    # print(f"Questions generated: {len(questions) if isinstance(questions, list) else 'Error: Not a list'}")
-
-                    # Parse JSON if it's returned as a string
-                    if isinstance(questions, str):
-                        try:
-                            print("entrou")
-                            questions = json.loads(questions)
-                        except json.JSONDecodeError as e:
-                            print(f"Failed to parse questions JSON: {str(e)}")
-                            print(f"Trying to fix JSON")
-                            system_prompt_json, user_prompt_json = build_prompt_to_validate_json(questions)
-                            
-                            questions = call_llm(system_prompt_json, user_prompt_json)
-                            questions = json.loads(questions)
-
-                    print(type(questions))
-                    # Insert questions into database
-                    # if isinstance(questions, list):
-                    for question in questions['questions']:
-                        # Validate question format
-                        try:
-                            question_id = str(uuid.uuid4())
-                            topic_value = topics_for_the_day
-                            # If topic is a list, extract just the string
-                            if isinstance(topic_value, list):
-                                topic_value = topic_value[0] if topic_value else ""
-                            # If it's still a string with brackets and quotes, remove them
-                            if isinstance(topic_value, str) and topic_value.startswith('[') and topic_value.endswith(']'):
-                                # Strip the brackets and quotes
-                                topic_value = topic_value.strip('[]"\'')
-
-                            # Insert the question into the database
-                            question_result = supabase.table('questions').insert({
-                                "id": question_id,
-                                "study_plan_days_id": day_ids_map[day_num],  # Use the day_id we got when inserting the day
-                                "passage": question.get('passage', ''),
-                                "question_text": question.get('question_text', ''),
-                                "options": question.get('options', []),
-                                "correct_answer": question.get('correct_answer', ''),
-                                "explanation": question.get('explanation', ''),
-                                "topic": topic_value,  # Now it's just the string without brackets
-                                "difficulty": question.get('difficulty', 'medium')  # Default to medium if not specified
-                            }).execute()
-                            
-                            print(f"Inserted question: {question_id}")
-                        except Exception as q_e:
-                            print(f"Error inserting question: {str(q_e)}")
-                    # else:
-                    #     print("No questions to insert - questions data is not a list")
-                    
-                    print(f"Successfully generated questions for day {day_num}")
-                    
-                except Exception as quiz_e:
-                    print(f"Error generating quiz for day {day_num}: {str(quiz_e)}")
-            
-            # Return the study plan with its days
-            print(f"Successfully created study plan: {study_plan_id}")
-            return jsonify({
+            # Return the response immediately while starting quiz generation in background
+            response_data = {
                 "id": study_plan_id,
                 "exam_id": exam_id,
                 "overview": study_plan_data.get('overview', ''),
                 "days": study_plan_data.get('day_topics', [])
-            }), 201
+            }
+            
+            # Add the first day ID to the response if available
+            if day_ids_map and len(day_ids_map) > 0:
+                # Find the minimum day number (first day)
+                first_day_num = min(day_ids_map.keys())
+                first_day_id = day_ids_map[first_day_num]
+                response_data["first_day_id"] = first_day_id
+            
+            # Start quiz generation in a background thread
+            quiz_thread = threading.Thread(
+                target=generate_quizzes_background,
+                args=(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content)
+            )
+            quiz_thread.daemon = True  # This ensures the thread won't block app shutdown
+            quiz_thread.start()
+            
+            print(f"Successfully created study plan: {study_plan_id} - Background quiz generation started")
+            return jsonify(response_data), 201
                 
         except Exception as e:
             print(f"Supabase error: {str(e)}")
