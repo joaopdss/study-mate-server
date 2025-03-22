@@ -8,12 +8,11 @@ services:
       context: .
     env_file: .env
     environment:
-      FLASK_APP: src/app.py
+      FLASK_APP: app.py
       PYTHONUNBUFFERED: 1
       SSL_CERT_PATH: /etc/letsencrypt/archive/api-study-mate.luna-fashion-ai.com/fullchain1.pem
       SSL_KEY_PATH: /etc/letsencrypt/archive/api-study-mate.luna-fashion-ai.com/privkey1.pem
-    command: ["flask", "run", "--host=0.0.0.0", "--port=5003", "--cert=/etc/letsencrypt/archive/api-study-mate.luna-fashion-ai.com/fullchain1.pem",
-             "--key=/etc/letsencrypt/archive/api-study-mate.luna-fashion-ai.com/privkey1.pem"]
+    command: ["python", "app.py"]
     ports:
       - 5003:5003
     volumes:
