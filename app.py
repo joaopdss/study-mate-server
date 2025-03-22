@@ -33,6 +33,6 @@ def create_app():
 if __name__ == '__main__':
     app = create_app()
 
-    # cert_path = os.environ.get('SSL_CERT_PATH', './certificates/cert.pem')
-    # key_path = os.environ.get('SSL_KEY_PATH', './certificates/key.pem')
-    app.run(debug=True, host='0.0.0.0', port=5003) 
+    cert_path = os.environ.get('SSL_CERT_PATH', './certificates/cert1.pem')
+    key_path = os.environ.get('SSL_KEY_PATH', './certificates/key1.pem')
+    app.run(host='0.0.0.0', port=5003) 
