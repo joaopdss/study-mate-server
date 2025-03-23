@@ -8,8 +8,6 @@ from typing import Dict, Any, Optional, List, Union
 from openai import OpenAI
 from pydantic import BaseModel
 from typing import Literal, List
-from google import genai
-from google.genai.types import GenerateContentConfig, HttpOptions
 
 # Load API key from environment variables
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -180,7 +178,7 @@ def generate_quiz(system_prompt: str, prompt: str) -> Optional[List[Dict[str, An
     Returns:
         list: List of question objects or None if generation failed
     """
-    response = call_llm(system_prompt, prompt, "Question", model="gemini-2.0-pro-exp-02-05")
+    response = call_llm(system_prompt, prompt, "Question")
     
     return response
     
