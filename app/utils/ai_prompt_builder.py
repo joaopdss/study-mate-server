@@ -86,6 +86,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
         - Avoid all mentions of practice strategies, time management tips, or study instructions.
         - Provide foundational theory, historical context, conceptual frameworks, and real-world examples.
         - Use illustrative analogies, case studies, and academic references.
+        - The text must be a resume/based on the user's exam materials if provided.
     
     Example of **Prohibited Content**:
         ❌ "Allocate 18 minutes per passage during practice."
@@ -113,7 +114,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
     **INSTRUCTIONS FOR "DESCRIPTION" FIELD**
 
     1. **Structure Requirements**:
-    - Start with a 1-2 sentence **plain-language definition** using everyday analogies:
+    - Start with a 1-2 sentence **plain-language definition** using everyday analogies, example below, do not use this exact example, use your own:
         *"Thesis = Main idea, like the headline of a news article. Paragraph organization = How ideas are ordered, like arranging furniture in a room."*  
     - Then explain through **3 Layers**:
         1. **Basic Concept**: "What is [topic]?" (Simple terms)
@@ -146,6 +147,9 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
         b) Include a concrete example  
         c) State its exam relevance  
         *"Transition words (like 'however') signal contrasting ideas. In a chemistry passage, you might read: 'Reactant A increases yield. However, excess amounts cause side reactions.' This helps you anticipate compare/contrast questions."*
+    
+    6. **Language**:
+    - The language of the study plan must be based on the {exam.country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English.
     ---
 
     Simple Example
@@ -165,7 +169,8 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
 
     The user's real prompt will be something like:
     Create a daily study plan for {exam.title} in {exam.country}.
-    The exam is on {exam.exam_date}, today is {today_date}. User's goal score: {exam.goal_score}.
+    The study plan must be on the {exam.country} language.
+    User's goal score: {exam.goal_score}.
     Proficiency level: {exam.proficiency}.
     Topics to study: {topics_str}.
     The user can study {exam.hours_per_day} hours per day.
@@ -251,10 +256,12 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
 
     
     user_prompt = f"""Create a daily study plan for {exam.title} in {exam.country}.
-    The exam is on {exam.exam_date}. Today is {datetime.datetime.now().strftime('%Y-%m-%d')}. User's goal score: {exam.goal_score}.
+    The study plan must be on the {exam.country} language.
+    User's goal score: {exam.goal_score}.
     Proficiency level: {exam.proficiency}.
     Topics to study: {exam.topics}.
-    The user can study {exam.hours_per_day} hours per day on the following days: {exam.study_schedule}.
+    The user can study {exam.hours_per_day} hours per day.
+    Create a study plan for {amount_of_days} days.
 
     Please provide a structured plan for each day until the exam date.
     Each day should include specific topics, recommended resources, and time estimates.
@@ -279,7 +286,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
     
     return system_prompt, user_prompt
 
-def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content):
+def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content, country):
     """
     Builds a quiz generation prompt for the LLM.
     """
@@ -331,7 +338,10 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - "Medium" questions: moderate reasoning, multi-step logic, or partial analysis.
     - "Hard" questions: deeper, more nuanced reasoning, interpretation of subtleties, or advanced conceptual understanding.
 
-    6. **Final Output**:
+    7. **Language**:
+    - The language of the quiz and respective questions/passages must be based on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English.
+
+    8. **Final Output**:
     - Return a single JSON array of 120 objects (no additional text, commentary, or formatting).
     - The JSON must be valid (no trailing commas, properly quoted strings, etc.).
     - Each question must follow the above structure exactly.
@@ -340,6 +350,7 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     prompt = f"""
     Topic: {topics_for_the_day}
     Subtopics: {subtopics}
+    The questions and passages must be on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If no country is provided, the language must be English.
     Web information about the exam: {search_results}
     Exam materials: {materials_content}
 

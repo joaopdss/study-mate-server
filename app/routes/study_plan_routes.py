@@ -18,7 +18,7 @@ import threading
 study_plan_bp = Blueprint('study_plan', __name__)
 
 # Function to generate quizzes in the background
-def generate_quizzes_background(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content):
+def generate_quizzes_background(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content, country):
     """
     Function to generate quizzes for a study plan in the background.
     
@@ -44,7 +44,7 @@ def generate_quizzes_background(study_plan_id, study_plan_data, day_ids_map, sea
             
             try:                    
                 # Build prompt for quiz generation
-                system_prompt, prompt = build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content)
+                system_prompt, prompt = build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_content, country)
                 
                 # Generate quiz
                 questions = generate_quiz(system_prompt, prompt)
@@ -254,7 +254,7 @@ def generate_plan():
             # Start quiz generation in a background thread
             quiz_thread = threading.Thread(
                 target=generate_quizzes_background,
-                args=(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content)
+                args=(study_plan_id, study_plan_data, day_ids_map, search_results, materials_content, exam_data.get('country', ''))
             )
             quiz_thread.daemon = True  # This ensures the thread won't block app shutdown
             quiz_thread.start()
