@@ -86,7 +86,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
         - Avoid all mentions of practice strategies, time management tips, or study instructions.
         - Provide foundational theory, historical context, conceptual frameworks, and real-world examples.
         - Use illustrative analogies, case studies, and academic references.
-        - The text must be a resume/based on the user's exam materials if provided.
+        - The text must be a resume/based on the user's exam materials if provided, using simple language and everyday analogies.
     
     Example of **Prohibited Content**:
         ❌ "Allocate 18 minutes per passage during practice."
