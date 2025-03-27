@@ -97,7 +97,6 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
         ✅ "The main idea of a passage often derives from the author's thesis statement, typically found in the introductory paragraph. For instance, in a 2021 study on climate communication, researchers identified that 78% of scientific papers place their core argument within the first two sentences. This positioning allows readers to immediately grasp the text's purpose before encountering supporting evidence like statistical trends or ethnographic observations..."
     
     2. **Structural Requirements**:
-    - Separate paragraphs with `\\n\\n`.
     - Escape quotes with `\"`.
     - Use full sentences; avoid bullet points even in prose.
 
@@ -106,7 +105,6 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
 
     5. Ensure your final output is **valid JSON**:
         - Escape any double quotes inside strings using a backslash (e.g., \"some text\").
-        - Replace actual newlines in strings with \n so they do not break JSON structure.
         - Do not include raw control characters (e.g., tabs, newlines, etc.) that are unescaped.
         - Do not wrap the output in triple backticks or any other markdown formatting.
         - Do not include trailing commas or any other invalid JSON elements.
@@ -149,7 +147,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
         *"Transition words (like 'however') signal contrasting ideas. In a chemistry passage, you might read: 'Reactant A increases yield. However, excess amounts cause side reactions.' This helps you anticipate compare/contrast questions."*
     
     6. **Language**:
-    - The language of the study plan must be based on the {exam.country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English.
+    - The language of the study plan must be based on the {exam.country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If is a language exam, the language must be the language of the exam.
     ---
 
     Simple Example
@@ -247,8 +245,6 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
 
     Important:
 
-    - Use \\n (double backslash + n) within your JSON strings to represent actual line breaks.
-    - Escape any double quotes inside strings (e.g., \"example\").
     - Do not insert raw control characters, invalid punctuation, or markdown code fences.
     - The final answer must be valid JSON, so it can be parsed by any standard JSON parser without error.
     - Ensure the "description" includes 12 to 16 paragraphs, using line breaks for multi-line lists or numbered items.
@@ -256,7 +252,7 @@ def build_study_plan_prompt(exam, search_results=None, materials_content=None, a
 
     
     user_prompt = f"""Create a daily study plan for {exam.title} in {exam.country}.
-    The study plan must be on the {exam.country} language.
+    The study plan must be on the {exam.country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If is a language exam, the language must be the language of the exam.
     User's goal score: {exam.goal_score}.
     Proficiency level: {exam.proficiency}.
     Topics to study: {exam.topics}.
@@ -295,8 +291,8 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     You are an advanced exam-question generator tasked with creating high-quality, realistic multiple-choice questions for any standardized or professional exam. Follow these guidelines:
 
     1. **Quantity & Difficulty Distribution**:
-    - Produce exactly 120 multiple-choice questions.
-    - Label 40 questions as "easy," 40 as "medium," and 40 as "hard."
+    - Produce exactly 80 multiple-choice questions.
+    - Label 20 questions as "easy," 20 as "medium," and 40 as "hard."
 
     2. **Passage or Scenario (If Needed)**:
     - For exams that benefit from reading or scenario-based contexts (e.g., TOEFL Reading, scenario-based certifications), include a medium size passage or scenario (3-5 paragraphs). 
@@ -330,7 +326,7 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - **Clear, Concise Language**: Use precise phrasing for both questions and answer choices, avoiding ambiguous wording.
 
     5. **Even Distribution of Correct Answers**:
-    - Across all 120 questions, ensure that each option (A, B, C, D) appears as the correct answer in roughly equal proportions.
+    - Across all 80 questions, ensure that each option (A, B, C, D) appears as the correct answer in roughly equal proportions.
     - Avoid patterns where one letter (e.g., "B") is disproportionately used as the correct answer.
 
     6. **Difficulty Calibration**:
@@ -339,10 +335,10 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - "Hard" questions: deeper, more nuanced reasoning, interpretation of subtleties, or advanced conceptual understanding.
 
     7. **Language**:
-    - The language of the quiz and respective questions/passages must be based on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English.
+    - The language of the quiz and respective questions/passages must be based on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If is a language exam, the language must be the language of the exam.
 
     8. **Final Output**:
-    - Return a single JSON array of 120 objects (no additional text, commentary, or formatting).
+    - Return a single JSON array of 80 objects (no additional text, commentary, or formatting).
     - The JSON must be valid (no trailing commas, properly quoted strings, etc.).
     - Each question must follow the above structure exactly.
     """
@@ -350,14 +346,14 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     prompt = f"""
     Topic: {topics_for_the_day}
     Subtopics: {subtopics}
-    The questions and passages must be on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If no country is provided, the language must be English.
+    The questions and passages must be on the {country} language. If the exam country is Brazil, the language must be Portuguese. If the exam country is USA, the language must be English. If no country is provided, the language must be English. If is a language exam, the language must be the language of the exam.
     Web information about the exam: {search_results}
     Exam materials: {materials_content}
 
-    Please generate 120 multiple-choice questions (40 easy, 40 medium, 40 hard) based on the context provided. Follow these requirements:
+    Please generate 80 multiple-choice questions (20 easy, 20 medium, 40 hard) based on the context provided. Follow these requirements:
 
     1. **Passage or Scenario**:
-    - If the exam requires reading comprehension or scenario-based reasoning, include a short passage or scenario (3-5 paragraphs) to provide context. Make the passage:
+    - If the exam requires reading comprehension or scenario-based reasoning, include a short passage or scenario (2-4 paragraphs) to provide context. Make the passage:
         - Complex and nuanced, with varied sentence structures and relevant vocabulary.
         - Possibly featuring different tones or perspectives.
     - If a passage is not needed for a certain question type (e.g., simple math or direct concept questions), leave the "passage" field empty.
@@ -368,7 +364,7 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
     - **Plausible Distractors**: Create incorrect answers that reflect common misconceptions or partial truths so they are not easily eliminated. Especially for medium/hard questions, distractors should be sophisticated enough to challenge test-takers.
 
     3. **Even Distribution of Correct Answers**:
-    - Across all 120 questions, ensure the correct answer is evenly distributed among options "A", "B", "C", and "D". 
+    - Across all 80 questions, ensure the correct answer is evenly distributed among options "A", "B", "C", and "D". 
     - Avoid patterns where one letter is correct disproportionately.
 
     3. **Question Format**:
@@ -388,8 +384,8 @@ def build_quiz_prompt(topics_for_the_day, subtopics, search_results, materials_c
         }}
 
     4. **Output Format**:
-    - Return exactly 120 questions in a valid JSON array (no additional commentary).
-    - Maintain the 40/40/40 distribution of easy, medium, and hard questions.
+    - Return exactly 80 questions in a valid JSON array (no additional commentary).
+    - Maintain the 20/20/40 distribution of easy, medium, and hard questions.
 
     Focus on producing rich, realistic questions that challenge understanding and application of the given topics.
     """
