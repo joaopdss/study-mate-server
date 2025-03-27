@@ -67,7 +67,7 @@ def generate_quizzes_background(study_plan_id, study_plan_data, day_ids_map, sea
                 print(type(questions))
                 
                 # Insert questions into database
-                for question in questions['questions']:
+                for question in questions['questions'] if "questions" in questions else questions['output']:
                     # Validate question format
                     try:
                         question_id = str(uuid.uuid4())
